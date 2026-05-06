@@ -1,0 +1,1536 @@
+#+TITLE: Sovereign Digest: Emacs Edition
+#+DATE: 2026-05-06
+
+* Core Editor Updates (Git)
+
+** Feature: Introduce 'margin' face for window margin background
+:PROPERTIES:
+:COMMIT: d24b10ca75f
+:DATE: 2026-05-05
+:CONFIDENCE: 4/5
+:END:
+- *Author:* Andrea Alberti
+- *Note:* Introduces a new 'margin' face for window margin background, enhancing customization options for users.
+
+** Architecture: Jsonrpc: rework sync request handling (bug#80623)
+:PROPERTIES:
+:COMMIT: 9b3855e164d
+:DATE: 2026-05-04
+:CONFIDENCE: 4/5
+:END:
+- *Author:* João Távora
+- *Note:* This commit refactors the JSON-RPC handling to improve robustness and clarity, which is significant for users relying on complex interactions with remote endpoints.
+
+** Architecture: Try to resize or resize-and-move child frames in one update
+:PROPERTIES:
+:COMMIT: a6a3b32208c
+:DATE: 2026-05-01
+:CONFIDENCE: 4/5
+:END:
+- *Author:* Dmitry Gutov
+- *Note:* This commit significantly improves the handling of child frame resizing and positioning, which can affect daily workflow by ensuring smoother and more efficient updates to window dimensions.
+
+** Architecture: Only perform erc-log-insert-log-on-open setup once
+:PROPERTIES:
+:COMMIT: cf9728c4be8
+:DATE: 2026-04-30
+:CONFIDENCE: 4/5
+:END:
+- *Author:* F. Jason Park
+- *Note:* This commit refactors the ERC logging system, improving its setup and teardown processes, which could affect daily workflow for users relying on ERC's logging features.
+
+** Architecture: In tree-sitter, signal if predicate function causes reparse
+:PROPERTIES:
+:COMMIT: 4e420d0b20e
+:DATE: 2026-04-29
+:CONFIDENCE: 4/5
+:END:
+- *Author:* Yuan Fu
+- *Note:* This change introduces a new mechanism to handle reparses in tree-sitter, which could affect the stability and correctness of buffer parsing operations.
+
+** Feature: Update to Org 9.8.3
+:PROPERTIES:
+:COMMIT: 0d8ccbfe595
+:DATE: 2026-04-19
+:CONFIDENCE: 4/5
+:END:
+- *Author:* Kyle Meyer
+- *Note:* Updating Org mode to version 9.8.3 introduces new features and improvements that enhance the user's workflow for managing notes, tasks, and documents.
+
+** Feature: Update to Org 9.8.2
+:PROPERTIES:
+:COMMIT: ca33663e506
+:DATE: 2026-04-12
+:CONFIDENCE: 4/5
+:END:
+- *Author:* Kyle Meyer
+- *Note:* Updating Org mode to version 9.8.2 introduces new features and improvements that enhance the user's workflow for managing notes, tasks, and documents.
+
+** Architecture: Improve performance of icalendar-recur.el and its tests
+:PROPERTIES:
+:COMMIT: 6eea0153377
+:DATE: 2026-04-12
+:CONFIDENCE: 4/5
+:END:
+- *Author:* Richard Lawrence
+- *Note:* This commit significantly improves the performance of iCalendar recurrence handling, which is a core feature for many users.
+
+** Feature: Support 24-bit TrueColor on MS-Windows console
+:PROPERTIES:
+:COMMIT: 2bca4ac0ed7
+:DATE: 2026-04-08
+:CONFIDENCE: 5/5
+:END:
+- *Author:* ewantown
+- *Note:* This commit adds significant new functionality for supporting 24-bit TrueColor on MS-Windows console, which is a major enhancement for experienced Emacs users.
+
+* Community Pulse (Reddit)
+
+** Workflow: Emacs as a Math Notebook and Advanced Symbolic Solver!
+:PROPERTIES:
+:OP: u/_DonK4rma
+:DATE: 2026-04-14
+:SCORE: 309 ↑
+:COMMENTS: 24
+:END:
+- *Link:* https://www.reddit.com/gallery/1slq1lp
+- *Why it matters:* This workflow showcases how Emacs can serve as a powerful math notebook, potentially saving time and improving understanding for users dealing with complex mathematical concepts.
+- *Summary:* The post demonstrates using Emacs and Org mode as an effective tool for taking math notes and solving advanced symbolic problems, inspired by Karthink's video. The user shares their experience with learning abstract mathematical concepts like eigenvectors and magnetic flux within Emacs. While the technical implementation details are not explicitly provided, the discussion highlights the use of Org mode for beautiful note-taking and equation previews, which is a significant workflow enhancement for mathematicians and scientists using Emacs. However, there's an open question about portability to LaTeX and compatibility with AUCTeX preview.
+- *Community voice:* “I do want to share the positive experience emacs has become while learning a topic that was very abstract to me for the first time.”
+
+** Workflow: Sidetabs using side windows.
+:PROPERTIES:
+:OP: u/Nicolas-Rougier
+:DATE: 2026-04-28
+:SCORE: 246 ↑
+:COMMENTS: 18
+:END:
+- *Link:* https://i.redd.it/mq2who2szyxg1.png
+- *Why it matters:* Experienced users interested in enhancing their workflow through custom UI elements will find this discussion valuable, as it addresses both the technical implementation and usability concerns of sidetabs.
+- *Summary:* The post demonstrates a novel Emacs workflow using side windows for sidetabs, which allows users to view and manage buffers in a sidebar. The implementation leverages custom code available on GitHub, with discussions around the visual aesthetics and functionality of such an interface. Users express interest but also highlight UX issues like buffer ordering and current-buffer indication. This reveals ongoing challenges in creating effective side window interfaces for Emacs.
+- *Community voice:* “how do you achieve such nice border lines in emacs?”
+
+** Blog: Stealing from the Best Emacs Configs
+:PROPERTIES:
+:OP: u/isus_copilul_minune
+:DATE: 2026-04-07
+:SCORE: 187 ↑
+:COMMENTS: 20
+:END:
+- *Link:* https://emacsredux.com/blog/2026/04/07/stealing-from-the-best-emacs-configs/
+- *Why it matters:* Experienced Emacs users can significantly enhance their productivity by applying proven configuration tweaks from established setups.
+- *Summary:* The post discusses optimizing Emacs configurations by adopting settings from popular existing setups. It highlights specific configuration tweaks such as increasing `read-process-output-max` for better performance with eglot and lsp-mode, and setting `reb-re-syntax` to 'rx' for easier regex testing in re-builder mode. The community comments add insights into the nuances of these optimizations and their potential impacts.
+- *Community voice:* “&gt; The default `read-process-output-max` is 64KB, which is still quite conservative.”
+
+** Package: I hand-tuned a color theme in CIELAB space — Ember, a warm graphite theme with three variants
+:PROPERTIES:
+:OP: u/OkAdhesiveness1951
+:DATE: 2026-04-11
+:SCORE: 158 ↑
+:COMMENTS: 32
+:END:
+- *Link:* https://i.redd.it/jt2h5cgokkug1.png
+- *Why it matters:* For Emacs users seeking a more comfortable color scheme for extended coding sessions, Ember offers a carefully crafted theme with perceptual color tuning, addressing common issues like saturation and contrast fatigue.
+- *Summary:* The post introduces Ember, a hand-tuned Emacs color theme designed for long-term use and comfort. The author used CIELAB perceptual color space to ensure balanced brightness levels across colors, aiming for visual consistency over extended periods. Three variants are provided: the main dark theme 'Ember', a softer contrast version 'Ember Soft', and a light mode variant 'Ember Light'. However, some users noted that hard-coding major and minor modes might limit user flexibility.
+- *Community voice:* “Every color was tuned in CIELAB perceptual color space rather than HSL, which makes a noticeable difference in how balanced the palette feels across different brightness levels.”
+
+** Discussion: Skeeto: "I have officially retired from Emacs" -- looking for maintainers for Elfeed etc.
+:PROPERTIES:
+:OP: u/nonreligious2
+:DATE: 2026-04-26
+:SCORE: 143 ↑
+:COMMENTS: 39
+:END:
+- *Link:* https://nullprogram.com/blog/2026/04/26/
+- *Why it matters:* This post underscores the critical need for community support in maintaining key Emacs packages, especially as original developers retire or move on.
+- *Summary:* Skeeto, a prominent Emacs developer, has announced retirement from maintaining Elfeed and other packages. This post highlights the community's reliance on these tools and raises concerns about finding new maintainers to take over. The discussion includes reflections on the technical challenges of maintenance and potential alternatives like `newsticker`. It also touches on broader questions regarding the future impact of AI on Emacs development.
+- *Community voice:* “Wish skeeto the best, his blog and packages are amazing.”
+
+** Package: Package announcement: buffer-to-pdf (by prot)
+:PROPERTIES:
+:OP: u/ImJustPassinBy
+:DATE: 2026-05-03
+:SCORE: 133 ↑
+:COMMENTS: 9
+:END:
+- *Link:* https://www.youtube.com/watch?v=JG4R-d0N-is
+- *Why it matters:* For experienced Emacs users who frequently need to share or print buffers with consistent formatting, this package offers a streamlined solution that maintains high-quality output across different themes.
+- *Summary:* The package `buffer-to-pdf` allows users to export the current buffer view (including font and colors) directly into a PDF file with high fidelity. This is particularly useful for those who need to share or print Emacs buffers in a visually consistent manner, especially when using dark themes where default printing methods produce poor results. The package leverages existing Emacs capabilities but enhances them significantly by improving the visual quality of the exported PDFs. Community reactions highlight its utility and potential applications beyond simple document sharing.
+- *Community voice:* “Very interesting package, I wasn't aware that exporting the current "view" (meaning font and colours) to a pdf is even possible.”
+
+** Package: tamagotchi on emacs!
+:PROPERTIES:
+:OP: u/leledonde
+:DATE: 2026-04-09
+:SCORE: 122 ↑
+:COMMENTS: 9
+:END:
+- *Link:* https://i.redd.it/8d47dn1pn6ug1.png
+- *Why it matters:* It offers a unique way to engage with Emacs beyond productivity tools, potentially increasing user retention and enjoyment among beginners and enthusiasts alike.
+- *Summary:* The post introduces a novel Emacs package called 'tamagotchi', which allows users to care for a virtual pet within their Emacs environment. The package includes basic commands like feeding, cleaning, sleeping, and hugging the tamagotchi, each affecting its hunger, happiness, and energy levels. If neglected, the tamagotchi dies. This playful addition highlights creative uses of Emacs Lisp but lacks detailed implementation details or advanced features.
+- *Community voice:* “\- care your tamagotchi with M-x tamacare feed, clean, sleep, hug”
+
+** Package: Wireframe.el Keyboard-first wireframe prototyping inside GNU Emacs.
+:PROPERTIES:
+:OP: u/Background_Cloud_231
+:DATE: 2026-05-03
+:SCORE: 114 ↑
+:COMMENTS: 7
+:END:
+- *Link:* https://www.reddit.com/gallery/1t387d1
+- *Why it matters:* For experienced Emacs users interested in UI design or rapid prototyping, Wireframe.el offers a powerful tool to create wireframes directly within their primary development environment.
+- *Summary:* Wireframe.el is a lightweight Emacs package for wireframing that focuses on low-fidelity structure, fast iteration, and DSL-driven UI thinking. It allows developers to prototype user interfaces directly within GNU Emacs using a domain-specific language (DSL). The package's simplicity and focus on keyboard-first interaction make it appealing for rapid prototyping without the need for graphical tools. Comments suggest potential improvements such as using cl-defstruct for data types and cl-defgeneric for rendering interfaces, indicating room for further development.
+- *Community voice:* “Wireframe-mode is a lightweight “Wireframing for developers” focused on low-fidelity structure, fast iteration, and DSL-driven UI thinking.”
+
+** Package: vertico-posframe-preview: a preview sidecar for vertico-posframe
+:PROPERTIES:
+:OP: u/AsleepSurround6814
+:DATE: 2026-05-01
+:SCORE: 110 ↑
+:COMMENTS: 16
+:END:
+- *Link:* https://www.reddit.com/gallery/1t0vmko
+- *Why it matters:* This package significantly enhances the user experience by providing immediate previews for selected candidates in the minibuffer, making it easier to navigate through large lists of options without switching buffers or windows.
+- *Summary:* The post introduces 'vertico-posframe-preview', a package that enhances the Vertico completion framework by adding a preview posframe next to the main one, showing details of selected candidates without leaving the minibuffer. It supports previews for various types of candidates and can be toggled during sessions. The implementation involves advising internal APIs from Vertico and Consult, which may require updates if these change internally. Community feedback highlights its potential to improve completion workflows and address previous limitations.
+- *Community voice:* “It adds a second posframe next to vertico-posframe and shows preview content for the currently selected Vertico candidate.”
+
+** Workflow: Emacs is a fantastic SQL editor
+:PROPERTIES:
+:OP: u/sch0lars
+:DATE: 2026-04-30
+:SCORE: 108 ↑
+:COMMENTS: 20
+:END:
+- *Link:* https://www.reddit.com/r/emacs/comments/1t06vg8/emacs_is_a_fantastic_sql_editor/
+- *Why it matters:* Experienced Emacs users can significantly enhance their productivity by leveraging its powerful text editing capabilities for SQL development with these tools and workflows.
+- *Summary:* The post demonstrates how Emacs can be effectively used as an SQL editor through `sql-mode`, allowing users to draft queries in the `*scratch*` buffer and interact with databases directly from Emacs. It highlights useful commands like `M-x sql-database` for database connections, and `C-c C-c` or `C-c C-b` for sending queries. The top comments introduce additional packages such as `sql-indent` for better SQL syntax highlighting and indentation, and a Python tool for ODBC-based database interactions.
+- *Community voice:* “If you're writing a lot of SQL in Emacs, I highly recommend the **[sql-indent](https://elpa.gnu.org/packages/sql-indent.html)** package.”
+
+** Workflow: Graphs in Org-Mode! Matplotlib Demo
+:PROPERTIES:
+:OP: u/_DonK4rma
+:DATE: 2026-04-16
+:SCORE: 106 ↑
+:COMMENTS: 6
+:END:
+- *Link:* https://v.redd.it/3htvkq46ymvg1
+- *Why it matters:* For experienced Emacs users, this workflow simplifies embedding dynamic visualizations directly into their documents without leaving Emacs, enhancing productivity for data-driven writing tasks.
+- *Summary:* The post demonstrates how to integrate Matplotlib with Org-Mode in Emacs, allowing users to embed and display graphs directly within their documents. It leverages Org-Babel for code execution and inline image rendering capabilities of Org-Mode. While the integration is part of standard Org-Mode features, it showcases a practical application that can enhance document creation and analysis workflows. The community's positive reaction indicates interest in such graphical enhancements.
+- *Community voice:* “With a couple lines of code you can output a org-babel result to give you a file result as a link, and display it with org display inline images.”
+
+** Package: org-mindmap — simple inline mind maps for Org
+:PROPERTIES:
+:OP: u/krvkir
+:DATE: 2026-04-06
+:SCORE: 103 ↑
+:COMMENTS: 15
+:END:
+- *Link:* https://i.redd.it/yphgtdcl5mtg1.gif
+- *Why it matters:* For users who frequently take notes or brainstorm within Org-mode, this package offers a streamlined way to incorporate visual mind maps directly into their workflow without leaving Emacs.
+- *Summary:* The post introduces org-mindmap, an Emacs package that allows for inline creation and editing of simple mind maps within Org-mode buffers. The package transforms lists into visually compact mind maps, offering a quick note-taking tool without the need to switch to external applications like Freeplane. However, it faces limitations such as read-only regions which prevent normal deletion commands from working on non-terminal nodes, raising concerns about user-editability.
+- *Community voice:* “I've been tired of switching to Freeplane every once in a while to draw a simple mind map, and Org lists were too wasteful on screen space, so I made a simple package which transforms lists into simple mind maps.”
+
+** Blog: Emacs is My Web Browser
+:PROPERTIES:
+:OP: u/joshuablais
+:DATE: 2026-04-21
+:SCORE: 101 ↑
+:COMMENTS: 25
+:END:
+- *Link:* https://joshblais.com/blog/emacs-as-my-browser/
+- *Why it matters:* For experienced Emacs users, this post offers insights on leveraging EWW and complementary packages to enhance web browsing efficiency while maintaining a distraction-free environment.
+- *Summary:* The author discusses using Emacs as a web browser through EWW, highlighting its benefits for productivity and reducing distractions. The post also touches on the limitations of EWW when dealing with modern JavaScript-heavy websites and introduces alternatives like Readwise for in-place text annotation and persistence into knowledge management tools such as Obsidian or Logseq. Readers share their experiences and suggest related tools like elfeed-readability and org-remark.
+- *Community voice:* “One thing that brought me back to chromium after a while using EWW was the use of a package called Readwise for in-place highlighting.”
+
+** Package: Launching a new grammar/spell checking tool for Org-mode, LaTeX, Markdown, Python, Clang, etc.
+:PROPERTIES:
+:OP: u/a_alberti
+:DATE: 2026-04-18
+:SCORE: 101 ↑
+:COMMENTS: 67
+:END:
+- *Link:* https://i.redd.it/k9zd6k8h3zvg1.jpeg
+- *Why it matters:* `lsp-ltex-plus` fills a significant gap in Emacs's toolset for users who require advanced grammar checking, making it an essential addition for those engaged in academic or professional writing within Emacs.
+- *Summary:* The post introduces `lsp-ltex-plus`, a new grammar/spell checking tool for Emacs that supports multiple languages including LaTeX, Org-mode, Markdown, Python, and more. It addresses the need for context-aware grammar checks beyond basic spelling corrections, which are often insufficient for academic writing or complex texts. The package leverages an LSP server to provide real-time feedback on grammatical errors and nuances in prose. Users have reported smooth integration with minimal setup issues across different operating systems.
+- *Community voice:* “That's what led me to work on `lsp-ltex-plus` over the past few weeks.”
+
+** Discussion: Must-have Emacs packages you should know about [Updated]
+:PROPERTIES:
+:OP: u/jamescherti
+:DATE: 2026-04-28
+:SCORE: 96 ↑
+:COMMENTS: 51
+:END:
+- *Link:* https://www.jamescherti.com/essential-emacs-packages/
+- *Why it matters:* This discussion reveals ongoing challenges in package optimization and highlights user needs beyond basic functionality, making it valuable for both developers and users seeking comprehensive tooling solutions.
+- *Summary:* The post discusses essential Emacs packages with a focus on Jinx vs Flyspell, highlighting performance concerns and operational differences. The community reacts by suggesting alternative packages and expanding the list of must-have tools for various use cases like writing and project management.
+- *Community voice:* “Flyspell is hardly a Jinx replacement, from my experience, since it operates differently.”
+
+** Package: grove.el - an Obsidian-like note-taking mode for Emacs
+:PROPERTIES:
+:OP: u/jonathanchu
+:DATE: 2026-05-05
+:SCORE: 93 ↑
+:COMMENTS: 18
+:END:
+- *Link:* https://jonathanchu.is/posts/introducing-grove/
+- *Why it matters:* For experienced Emacs users invested in robust note-taking solutions, grove.el offers a compelling alternative that combines Org mode's power with Obsidian-like features, potentially streamlining their workflows.
+- *Summary:* The post introduces grove.el, a new package that provides an Obsidian-like note-taking experience within Emacs. It leverages Org mode for content management and aims to offer features such as graph visualization and quick capture mechanisms similar to those found in Obsidian. The technical approach involves integrating with existing Org mode functionalities while adding specific enhancements for navigation and linking. However, the post raises questions about compatibility with other packages like org-roam and the ease of migration from these systems. Community feedback highlights interest but also concerns over integration and workflow consistency.
+- *Community voice:* “I'm heavily invested in org-roam now, and I need to focus on my dissertation rather than switching PKMs again, but I came to emacs from Logseq and have been searching to recreate its workflow ever since.”
+
+** Package: emskin: a nested Wayland compositor in Rust that embeds any app into Emacs windows
+:PROPERTIES:
+:OP: u/bilikai
+:DATE: 2026-04-17
+:SCORE: 88 ↑
+:COMMENTS: 50
+:END:
+- *Link:* https://www.reddit.com/r/emacs/comments/1sooz6l/emskin_a_nested_wayland_compositor_in_rust_that/
+- *Why it matters:* This package offers a unique way to integrate graphical applications seamlessly within Emacs, potentially revolutionizing how users interact with their desktop environment from inside Emacs.
+- *Summary:* emskin is a nested Wayland compositor written in Rust that allows embedding graphical applications into Emacs windows, treating them as if they were buffers. It leverages Smithay for its implementation and provides features like window mirroring, input method passthrough, and bidirectional clipboard support. The package raises questions about performance overhead, especially for resource-intensive tasks such as video playback or gaming. Community reactions highlight both excitement over the innovative approach and concerns regarding maintainability.
+- *Community voice:* “Firefox opens as a Wayland client owned by the compositor, placed and sized to match the current Emacs window.”
+
+** Blog: The Definitive Guide to Code Folding in Emacs
+:PROPERTIES:
+:OP: u/jamescherti
+:DATE: 2026-04-23
+:SCORE: 76 ↑
+:COMMENTS: 23
+:END:
+- *Link:* https://www.jamescherti.com/emacs-the-definitive-guide-to-code-folding/
+- *Why it matters:* For experienced Emacs users who deal with large codebases or complex log files, this guide offers valuable insights into optimizing their workflow through effective use of folding techniques.
+- *Summary:* The post provides a comprehensive guide to code folding in Emacs, discussing various approaches and packages for managing large codebases efficiently. It highlights the utility of structural and arbitrary region folding, especially useful for inspecting log files or handling long-form text outputs from language models. The discussion also includes user-submitted tweaks and custom functions that enhance selective display functionality, offering a more intuitive way to manage folded regions without unfolding them in the same buffer.
+- *Community voice:* “Turns out - not only structural folding but also arbitrary region folding is useful sometimes: when inspecting long log files, or dealing with LLM output, etc.”
+
+** Package: New package. Browse GitHub repos without cloning.
+:PROPERTIES:
+:OP: u/ilemming_banned
+:DATE: 2026-04-24
+:SCORE: 74 ↑
+:COMMENTS: 22
+:END:
+- *Link:* https://github.com/agzam/remoto.el
+- *Why it matters:* For developers who frequently browse GitHub repositories but do not need local copies, 'remoto.el' could streamline their workflow by integrating repository browsing directly into Emacs without the overhead of cloning.
+- *Summary:* The post introduces 'remoto.el', a new Emacs package allowing users to browse GitHub repositories without the need for cloning. The package seems to offer an alternative way of interacting with remote codebases directly within Emacs, potentially reducing disk space usage and speeding up repository exploration. However, initial user feedback highlights issues such as hanging due to missing authentication tokens and read-only file errors when attempting to copy files via Dired. These limitations suggest that the package is still in its early stages and may require further development.
+- *Community voice:* “Side note relevant to this: the gh cli spies on you until you disable the telemetry.”
+
+** Discussion: What modern Emacs packages am I missing?
+:PROPERTIES:
+:OP: u/nicenflufty
+:DATE: 2026-04-13
+:SCORE: 71 ↑
+:COMMENTS: 50
+:END:
+- *Link:* https://www.reddit.com/r/emacs/comments/1skpzsz/what_modern_emacs_packages_am_i_missing/
+- *Why it matters:* This discussion highlights unmet needs in maintaining an up-to-date Emacs setup and showcases how modern packages can significantly enhance productivity.
+- *Summary:* The post initiates a discussion about modern Emacs packages and features that could enhance an older configuration. The top comments suggest several useful packages like Trident, Vertico, Marginalia, Orderless, Helm, Transient, and consult for improved interface and search capabilities. Additionally, the community recommends upgrading to newer versions of Emacs and exploring built-in functionalities.
+- *Community voice:* “The trident Vertico, Marginalia, and Orderless are excellent packages to consider.”
+
+** Blog: Hot-wiring the lisp machine
+:PROPERTIES:
+:OP: u/scheatkode
+:DATE: 2026-04-18
+:SCORE: 69 ↑
+:COMMENTS: 34
+:END:
+- *Link:* https://scheatkode.com/blog/019d463d-38b3-7e63-80fd-6ed97bd8815e/hot-wiring-the-lisp-machine/
+- *Why it matters:* It offers insights into minimalist Emacs customization techniques that could inspire more efficient workflows for power users looking to streamline their configurations.
+- *Summary:* The post discusses a personal journey in optimizing Emacs configurations by minimizing dependencies and implementing custom solutions, such as creating an Org-mode compiler to handle complex text transformations efficiently. The author reflects on the broader context of software bloat and the elegance of plain text interfaces. While some readers appreciate the writing style and technical approach, others express confusion about certain decisions made within the configuration.
+- *Community voice:* “Love the style, building an org-mode compiler sounds like something that will generalize for a lot of other things.”
+
+** Package: Mediant: Org-Agenda in your browser
+:PROPERTIES:
+:OP: u/CherryBrownsEnjoyer
+:DATE: 2026-04-12
+:SCORE: 64 ↑
+:COMMENTS: 13
+:END:
+- *Link:* https://i.redd.it/ttx5u28rrqug1.gif
+- *Why it matters:* Experienced Emacs users interested in a more accessible, web-based interface for managing Org-mode agendas may find Mediant intriguing as an alternative to clunky mobile apps.
+- *Summary:* Mediant is an experimental web-based interface for Org-Agenda that aims to provide a uniform UI across devices, addressing perceived clunkiness in existing mobile apps. It uses localStorage to persist data within the browser and offers easier sharing compared to traditional export options. The package's limitations include lack of server-side storage and potential security concerns with local data handling.
+- *Community voice:* “I made this because I found the existing mobile apps for Org-mode a bit clunky and not ideal for my workflow.”
+
+** Package: I made an Emacs completion style using nucleo, the fuzzy matcher from Helix
+:PROPERTIES:
+:OP: u/AsleepSurround6814
+:DATE: 2026-04-25
+:SCORE: 63 ↑
+:COMMENTS: 7
+:END:
+- *Link:* https://www.reddit.com/gallery/1svdsdf
+- *Why it matters:* This package offers a more accessible alternative for fuzzy matching with potential performance benefits and cross-platform compatibility, addressing common setup issues faced by users of dynamic modules.
+- *Summary:* The post introduces a new Emacs completion style package using nucleo, a fuzzy matcher from Helix, aiming for better performance and ease of setup compared to hotfuzz. It includes prebuilt dynamic modules to reduce friction across different environments and supports Japanese input through Migemo integration. The author also discusses the upcoming native flex completion in Emacs 31, which is inspired by hotfuzz's algorithm.
+- *Community voice:* “Hi, I made an Emacs completion style package using \`nucleo\`, the fuzzy matcher used by Helix.”
+
+** Package: Neovim theme that may also be viable for Emacs?
+:PROPERTIES:
+:OP: u/aribert
+:DATE: 2026-04-09
+:SCORE: 60 ↑
+:COMMENTS: 11
+:END:
+- *Link:* https://www.reddit.com/gallery/1sh1u25
+- *Why it matters:* This package offers a visually appealing alternative to existing Emacs themes and opens up possibilities for cross-editor theme compatibility, potentially addressing aesthetic preferences of users familiar with Neovim's look.
+- *Summary:* The post introduces a new Emacs theme called 'token', which is a port of an existing Neovim theme. The author seeks feedback and potential maintainers for the theme, highlighting its creation with AI assistance and its availability in the contrib/emacs variant on GitHub. Community responses indicate interest but also suggest improvements such as integration with modus-themes for better accessibility.
+- *Community voice:* “On the other side of things I let an artificial friend of mine create a port of the 'token' (pun intended) theme that now lives in the /contrib/emacs variant of the token theme.”
+
+** Package: Yuta.el is a fast, native fuzzy finder, Lsp Completion, and command palette for Emacs, built to work with plain Emacs + external CLI tools.
+:PROPERTIES:
+:OP: u/Background_Cloud_231
+:DATE: 2026-05-05
+:SCORE: 51 ↑
+:COMMENTS: 50
+:END:
+- *Link:* https://www.reddit.com/gallery/1t4jq5h
+- *Why it matters:* Yuta.el offers a streamlined and efficient fuzzy finder solution with robust LSP integration, making it an attractive alternative to existing tools like Corfu or Company for users seeking native Emacs solutions.
+- *Summary:* Yuta.el is a comprehensive fuzzy finder and command palette for Emacs, offering features like project file search, live grep, buffer switching, and LSP integration without relying on Corfu or Company. It uses a dual mode architecture with an interactive in-Emacs filtering mode and FZF mode for large datasets, along with a split popup UI that includes input, candidate list, and preview panes. The package leverages overlays and child frames for popups and supports live previews and async process pipelines for responsiveness. However, it faces challenges such as directory finding issues and potential limitations in TTY environments.
+- *Community voice:* “Yuta is a fast, native fuzzy finder and command palette for Emacs, built to work with plain Emacs + external CLI tools.”
+
+** Package: I've now created a theme for Emacs, inspired by the Yotsuba B theme from 4chan.
+:PROPERTIES:
+:OP: u/Vulture_07
+:DATE: 2026-04-08
+:SCORE: 51 ↑
+:COMMENTS: 9
+:END:
+- *Link:* https://i.redd.it/p06bx3qxe2ug1.png
+- *Why it matters:* For users seeking a distinctive aesthetic that evokes memories from online communities, this package offers a unique way to personalize their Emacs environment.
+- *Summary:* The post introduces a new Emacs theme inspired by the Yotsuba B theme from 4chan, aiming to bring a familiar aesthetic to Emacs users. The technical approach involves customizing colors and fonts within Emacs's theme framework. While it offers an appealing visual style for fans of the original theme, there are no specific details on performance impact or compatibility with all Emacs versions. Community reaction is positive, highlighting nostalgia and interest in pairing it with other 4chan-related tools.
+- *Community voice:* “[https://github.com/Senka07/yotsuba-emacs-theme](https://github.com/Senka07/yotsuba-emacs-theme)”
+
+** Blog: Implementing a minimal evergreen blog in HTML and Emacs Lisp
+:PROPERTIES:
+:OP: u/Martinsos
+:DATE: 2026-05-02
+:SCORE: 50 ↑
+:COMMENTS: 22
+:END:
+- *Link:* https://martinsos.com/posts/my-blog-in-elisp
+- *Why it matters:* Experienced Emacs users interested in blogging or static site generation can learn from this minimalist approach to creating a future-proof, maintainable blog using Org mode features.
+- *Summary:* The author shares their experience creating an evergreen blog using HTML and Emacs Lisp. The implementation details include publishing configurations in separate files, generating RSS feeds via Org-publish sitemaps, and running external scheduled tasks for updates. Limitations mentioned are the lack of anchor links for headings and monospaced body text. Community feedback highlights the site's aesthetics and functionality across devices.
+- *Community voice:* “I started working on this a couple of months ago in the spare time and have finally gotten it to the state where I am ready to pronounce it done!”
+
+** Package: uv.el -- a declarative Emacs interface for the uv Python package manager (experimental)
+:PROPERTIES:
+:OP: u/Ethan045627
+:DATE: 2026-04-28
+:SCORE: 48 ↑
+:COMMENTS: 1
+:END:
+- *Link:* https://www.reddit.com/r/emacs/comments/1sy965x/uvel_a_declarative_emacs_interface_for_the_uv/
+- *Why it matters:* Experienced users will find this package interesting as it showcases a novel way to integrate external tools into Emacs with dynamic UI generation, potentially applicable to other similar use cases.
+- *Summary:* The post introduces `uv.el`, an Emacs package that provides a declarative interface for managing Python dependencies via the `uv` package manager using a transient UI. The key innovation is its dynamic generation of the UI and command dispatcher from a single data structure (`uv-command-spec`) rather than hardcoding per-subcommand transients, which enhances maintainability and flexibility across different versions of `uv`. This approach raises questions about best practices for transient-based integrations in Emacs packages.
+- *Community voice:* “Instead of hardcoding a transient definition per subcommand (which is the obvious approach and also how I started), the whole thing is driven by a single data structure called `uv-command-spec`.”
+
+* Blogosphere (Planet Emacslife)
+
+** Charlie Holland: Emacs Completion Showcase with VOMPECCC (video)
+:PROPERTIES:
+:DATE: 2026-05-05
+:END:
+- *Author:* Charlie Holland
+- *Link:* https://www.chiply.dev/post-vompeccc-showcase
+- *Why it matters:* Experienced Emacs users will find this valuable for enhancing their workflow with advanced completion features.
+- *Summary:* The post showcases VOMPECCC, a comprehensive Emacs completion framework that integrates various completion backends. It demonstrates how to set up and use VOMPECCC for efficient code navigation and command invocation in Emacs. The author highlights the benefits of using multiple completion engines but does not delve into performance implications or potential conflicts with other packages.
+
+** Irreal: Emacs Keyboard Ergonomics
+:PROPERTIES:
+:DATE: 2026-05-05
+:END:
+- *Author:* Irreal
+- *Link:* https://irreal.org/blog/?p=13788
+- *Why it matters:* This matters for Emacs users who prioritize ergonomic setups to prevent long-term physical strain.
+- *Summary:* The post discusses strategies for improving Emacs keyboard ergonomics to prevent repetitive strain injury (RSI). It highlights the use of split keyboards and a technique called 'one shot modifiers' where modifier keys are tapped rather than held down. The author notes that while split keyboards can help, configuring one-shot modifiers was particularly effective in reducing finger movement.
+
+** James Dyer: A Zoomed in vc dir for the Current Directory in dired
+:PROPERTIES:
+:DATE: 2026-05-05
+:END:
+- *Author:* James Dyer
+- *Link:* https://emacs.dyerdwelling.family/emacs/20260416103000-emacs--a-zoomed-in-vc-dir-for-the-current-directory/
+- *Why it matters:* This technique can significantly streamline workflows in large projects by focusing VC status on a specific subdirectory.
+- *Summary:* The post introduces a custom Emacs function to generate a VC status overview for the current directory in Dired mode, providing a zoomed-in view of version control information. This approach leverages existing Emacs packages and functions to filter and display only relevant files within the specified directory, enhancing workflow efficiency. The limitation is that it requires manual invocation or integration into an existing keybinding setup.
+
+** Magnus: Jumping to errors in Evil
+:PROPERTIES:
+:DATE: 2026-05-04
+:END:
+- *Author:* Magnus
+- *Link:* https://magnus.therning.org/2026-05-04-jumping-to-errors-in-evil.html
+- *Why it matters:* Experienced Emacs users who rely on Evil mode and need seamless navigation between errors will find this enhancement valuable.
+- *Summary:* The post demonstrates how to modify the Evil mode in Emacs to include error jumps in the jump list. It provides a custom function `mes/evil-goto-next-error` that leverages `evil-define-motion` with the :jump flag set to t for storing locations. The primary limitation is its dependency on Flymake mode, which may not be suitable for all users or project types.
+
+** Protesilaos: Emacs: save any buffer as PDF (my new buffer-to-pdf package)
+:PROPERTIES:
+:DATE: 2026-05-02
+:END:
+- *Author:* Protesilaos
+- *Link:* https://protesilaos.com/codelog/2026-05-02-emacs-buffer-to-pdf-new-package/
+- *Why it matters:* Experienced Emacs users will find this package valuable for quickly generating visually consistent PDFs of their buffers without the need for extensive configuration.
+- *Summary:* The post introduces the 'buffer-to-pdf' Emacs package which allows users to save any buffer as a PDF while retaining visual elements such as font size and theme. The package is designed for quick document sharing rather than complex export functionalities, making it particularly useful for academics or those needing to distribute presentation notes frequently.
+
+** Jiewawa: Overriding keybindings with Meow
+:PROPERTIES:
+:DATE: 2026-05-01
+:END:
+- *Author:* Jiewawa
+- *Link:* https://jiewawa.me/2026/05/overriding-keybindings-with-meow/
+- *Why it matters:* Experienced Emacs users interested in modal editing can benefit from this technique to customize their workflow with more intuitive keybindings.
+- *Summary:* The post demonstrates how to override keybindings in Emacs using the Meow package for modal editing. Specifically, it shows how to bind 'j' and 'k' keys to scroll up and down instead of moving forward or backward a line within normal and motion states. The author leverages Meow's ability to translate key presses into default Emacs bindings via macros.
+
+** James Dyer: A Tiny Header line Tweak: Image Dimensions in image mode
+:PROPERTIES:
+:DATE: 2026-04-30
+:END:
+- *Author:* James Dyer
+- *Link:* https://emacs.dyerdwelling.family/emacs/20260430074958-emacs--a-tiny-header-line-tweak:-image-dimensions-in-image-mode/
+- *Why it matters:* This customization enhances productivity for Emacs users working extensively with images by eliminating the need to use external commands or manually check file properties.
+- *Summary:* The post demonstrates a minor tweak to Emacs' image mode that adds the dimensions of an image (width and height) directly to the header line. This is achieved by modifying the `image-mode-header-line-format` variable, providing immediate visual feedback on image size without leaving Emacs. The approach is simple yet effective for users who frequently work with images.
+
+** Charles Choi: Bulk Search & Replace Commands for Files and Buffers in Emacs
+:PROPERTIES:
+:DATE: 2026-04-30
+:END:
+- *Author:* Charles Choi
+- *Link:* http://yummymelon.com/devnull/bulk-search-replace-commands-for-files-and-buffers-in-emacs.html
+- *Why it matters:* Experienced Emacs users will find this valuable for streamlining bulk text manipulation across files.
+- *Summary:* The post highlights various bulk search and replace commands available in Emacs for multiple files or buffers, emphasizing their power but noting the difficulty in discovering them due to lack of menu visibility. It suggests using Casual and Anju UI packages to improve discoverability and usability of these commands. The focus is on regular expression handling within these operations.
+
+** Dave's blog: Browsing URLs from Gnus Summary buffer
+:PROPERTIES:
+:DATE: 2026-04-29
+:END:
+- *Author:* Dave's blog
+- *Link:* https://davemq.github.io/emacs/gnus/url/2026/04/29/visiting-urls-from-gnus-summary.html
+- *Why it matters:* Experienced Emacs users who rely on Gnus for RSS and Atom feeds will find this tip useful for quickly accessing linked content.
+- *Summary:* The post demonstrates how to browse URLs from Gnus summary buffer using the command 'gnus-summary-browse-url', which scans article bodies for links and offers them for browsing. The author highlights that this feature is bound to 'w' in the summary buffer but was not immediately obvious due to lack of documentation or familiarity with key bindings. A limitation noted is that some articles may contain multiple URLs, requiring further selection.
+
+** Einar Mostad: Fix Emacs python-mode REPL and org code block with python evaluation problems
+:PROPERTIES:
+:DATE: 2026-04-28
+:END:
+- *Author:* Einar Mostad
+- *Link:* https://einar.codeberg.page/fix-python-mode-repl-problem.html
+- *Why it matters:* Experienced Emacs users working with Python will find this useful for troubleshooting common issues in their development workflow.
+- *Summary:* The post addresses issues with the Python mode REPL and Org code block evaluation in Emacs. It describes a problem where strange glyphs appear and an error occurs when trying to import files into the Python shell. The author provides a solution involving configuration changes that fix these problems by ensuring proper setup of the Python environment within Emacs.
+
+** Charlie Holland: VOMPECCC from Scratch: Picking Produce with ICR in Emacs
+:PROPERTIES:
+:DATE: 2026-04-28
+:END:
+- *Author:* Charlie Holland
+- *Link:* https://www.chiply.dev/post-vompeccc-fruits
+- *Why it matters:* Experienced Emacs users will find this valuable for enhancing their workflow through more efficient command completion.
+- *Summary:* The post demonstrates how to implement Incremental Completing Read (ICR) in Emacs for efficient completion of commands and variables. It provides a detailed walkthrough using the VOMPECCC package, explaining its configuration and usage with examples. The author highlights the benefits of ICR over traditional completing read methods but notes that it requires careful setup and understanding of Emacs Lisp.
+
+** Dave Pearson: blogmore.el v4.3.0
+:PROPERTIES:
+:DATE: 2026-04-28
+:END:
+- *Author:* Dave Pearson
+- *Link:* https://blog.davep.org/2026/04/28/blogmore-el-v4-3-0.html
+- *Why it matters:* Experienced Emacs users who maintain blogs will find these new features useful for automating and simplifying their workflow.
+- *Summary:* The post introduces new features in blogmore.el version 4.3.0, including commands to toggle comment invitation properties and set email addresses for invitations. These enhancements streamline editing front matter for blog posts, making it easier to manage comments directly from Emacs.
+
+** Dave's blog: Writing an automated test to try to find an Emacs bug
+:PROPERTIES:
+:DATE: 2026-04-27
+:END:
+- *Author:* Dave's blog
+- *Link:* https://davemq.github.io/emacs/test/2026/04/27/test.html
+- *Why it matters:* Experienced Emacs users can learn how to write automated tests for identifying elusive bugs in their custom setups.
+- *Summary:* The post describes creating an automated test to identify a bug in Emacs where the default font information is lost when certain modes (a68-mode or alda-mode) are loaded. The author uses specific Emacs Lisp code to set up and verify the initial state of the font settings, then checks if these settings persist after loading the suspect modes. This approach helps isolate the issue by systematically testing different configurations.
+
+** Marcin Borkowski: How I use my numeric keypad with Emacs Ledger mode
+:PROPERTIES:
+:DATE: 2026-04-25
+:END:
+- *Author:* Marcin Borkowski
+- *Link:* https://mbork.pl/2026-04-25_How_I_use_my_numeric_keypad_with_Emacs_Ledger_mode
+- *Why it matters:* This customization can significantly improve efficiency when working with financial data in Ledger mode.
+- *Summary:* The post demonstrates how Marcin Borkowski overcame the issue of using his numeric keypad with Emacs Ledger mode by remapping keys to ensure correct input of decimal points instead of commas. The technical approach involves customizing Emacs key bindings and understanding input methods for specific modes. Notable limitation is that this solution may require adjustments based on individual keyboard layouts or preferences.
+
+** Charles Choi: Some nice to know keybindings when using the mouse in Emacs
+:PROPERTIES:
+:DATE: 2026-04-24
+:END:
+- *Author:* Charles Choi
+- *Link:* http://yummymelon.com/devnull/some-nice-to-know-keybindings-when-using-the-mouse-in-emacs.html
+- *Why it matters:* Experienced Emacs users can significantly improve their workflow efficiency by leveraging these mouse-based keybindings.
+- *Summary:* The post outlines several useful keybindings for mouse interactions in Emacs, including F10 to open menu bar navigation, S-F10 to start context menu navigation with the context-menu-mode enabled, C-M-mouse-1 to activate a rectangular region selection, and M-Drag-mouse-1 to set the secondary selection. These bindings enhance user interaction by providing shortcuts for common tasks.
+
+** Charlie Holland: A VOMPECCC Case Study: Spotify as Pure ICR in Emacs
+:PROPERTIES:
+:DATE: 2026-04-24
+:END:
+- *Author:* Charlie Holland
+- *Link:* https://www.chiply.dev/post-vompeccc-spot
+- *Why it matters:* Experienced Emacs users interested in deepening their integration capabilities will find this post valuable.
+- *Summary:* The post demonstrates how to integrate Spotify into Emacs using Incremental Completing Read (ICR), allowing users to control Spotify through an ICR interface. It explains the technical approach of leveraging Emacs's completion framework and provides code snippets for implementation. However, it assumes familiarity with advanced Emacs configuration techniques.
+
+** Rahul Juliato: Getting Emacs proced.el to Show CPU and Memory on macOS
+:PROPERTIES:
+:DATE: 2026-04-23
+:END:
+- *Author:* Rahul Juliato
+- *Link:* https://rahuljuliato.com/posts/proced-macos
+- *Why it matters:* This matters for users who rely on proced.el and need accurate resource usage information on macOS.
+- *Summary:* The post explains how to get CPU and memory usage columns in Emacs' proced.el on macOS by modifying system_process_attributes function in src/sysdep.c. It demonstrates a workaround involving adding code to retrieve these metrics from the BSD process API. The limitation is that this requires recompiling Emacs with custom modifications.
+
+** Tony Zorman: Writing Literate Blog Posts
+:PROPERTIES:
+:DATE: 2026-04-23
+:END:
+- *Author:* Tony Zorman
+- *Link:* https://tony-zorman.com/posts/interactive.html
+- *Why it matters:* Experienced Emacs users interested in literate programming and blogging will find this guide valuable for setting up their own efficient writing environment.
+- *Summary:* Tony Zorman demonstrates how to use Emacs packages to facilitate the writing of literate blog posts using Org mode and exporting them into GitHub Flavored Markdown (GFM) format. The post covers configuring Emacs for seamless export while highlighting limitations with current tools like pandoc and hakyll. It provides a detailed workflow that includes custom configurations and scripts.
+
+* From Sacha Chua's Weekly Emacs News
+
+Items not covered by the sources above, curated from
+[[https://sachachua.com/blog/category/emacs-news/][Sacha Chua's Weekly Emacs News]].
+
+** Newbies and Starter Kits
+- *Link:* https://www.emacswiki.org/emacs/CarnivalApril2026
+- . Check out that post to see all the entries people have shared so far. I enjoyed
+
+** shared some defaults
+- *Link:* https://protesilaos.com/codelog/2026-04-30-emacs-decent-default-sacha-chua/
+- that even experienced users have been trying out. The carnival theme for May 2026 is "
+
+** May I recommend…
+- *Link:* https://www.emacswiki.org/emacs/CarnivalMay2026
+- ". Looking forward to reading your posts!
+
+** Magnus: Follow-up on switching to eglot
+- *Link:* https://magnus.therning.org/2026-05-02-follow-up-on-switching-to-eglot.html
+- more about use-package
+
+** badele/idem: Doom Emacs configuration for DevOps workflows (bash, go, json, python, terraform, typescript, etc…)
+- *Link:* https://github.com/badele/idem
+- (
+
+** Sharing my emacs.d while cleaning up my folder a bit.
+- *Link:* https://github.com/igpdev/dyst-emacs.d
+- (
+
+** Been working on my emacs config lately
+- *Link:* https://gist.github.com/aaratha/41ae3f2fbeed8497b974b229aa25c875
+- (
+
+** My configuration and workflow for game development in emacs with Godot
+- *Link:* https://www.reddit.com/r/emacs/comments/1sxbves/my_configuration_and_workflow_for_game/
+
+** compat 31.0.0.0 released, stabilization in progress
+- *Link:* https://github.com/emacs-compat/compat/commit/2ef017671bdc643dbdbe3bfb746b80d090db792a
+- (
+
+** NeLisp v1.0 — Emacs Lisp implemented in Elisp, plus a small Rust runtime that runs it without Emacs
+- *Link:* https://github.com/zawatton/nelisp
+- (
+
+** How I use quick-sdcv to get the Oxford English Dictionary in my Emacs
+- *Link:* https://www.reddit.com/r/emacs/comments/1t0cgjn/how_i_use_quicksdcv_to_get_the_oxford_english/
+
+** Stupidly Simple Notes Taking With Emacs - Linux Renaissance
+- *Link:* https://watch.linuxrenaissance.com/w/kVFJsqTfqHWg56gtpiK5xW
+- (
+
+** I built an org-mode weekday repeater, .+wd
+- *Link:* https://www.reddit.com/r/emacs/comments/1sz6o25/i_built_an_orgmode_weekday_repeater_wd/
+
+** Experimental/personal PDF-viewing/notetaking minor mode I (sort of) vibe-coded.
+- *Link:* https://github.com/mingey/dossier.el
+- (
+
+** Randy Ridenour: Managing Multiple-Choice Questions With Org Mode
+- *Link:* https://randyridenour.net/posts/2026-05-03-managing-multiplechoice-questions-with-org-mode.html
+
+** jamesendreshowell/org-teach-worksheet: Emacs lisp and Org macros for authoring classroom worksheets - Codeberg.org
+- *Link:* https://codeberg.org/jamesendreshowell/org-teach-worksheet
+- (
+
+** schue/org-canvas: upload Org mode files directly into an instance of the Canvas LMS.
+- *Link:* https://codeberg.org/schue/org-canvas
+- (
+
+** canvas.el/canvas.org - interact with the Canvas learning management system
+- *Link:* https://github.com/deopurkar/canvas.el/blob/main/canvas.org
+- (
+
+** De Org-mode a Trilium Notes, pasando por Obsidian · El blog de Lázaro
+- *Link:* https://elblogdelazaro.org/de-org-mode-a-trilium-notes-pasando-por-obsidian/
+- (
+
+** tykayn/orgmode-to-gemini-blog - Source Bliss: Comme dirait Manon, les sources, c'est important.
+- *Link:* https://source.cipherbliss.com/tykayn/orgmode-to-gemini-blog
+- (
+
+** vertico-posframe-preview: a preview sidecar for vertico-posframe
+- *Link:* https://github.com/kn66/vertico-posframe-preview
+- (
+
+** Auto-mark rules, snooze, marking and filters for GitHub notifications in Emacs
+- *Link:* https://github.com/Daskeladden/shipit
+- (
+
+** uv.el – a declarative Emacs interface for the uv Python package manager (experimental)
+- *Link:* https://github.com/Ethan0456/uv.el
+- (
+
+** Magnus: Secrets when connecting to DBs
+- *Link:* https://magnus.therning.org/2026-05-02-secrets-when-connecting-to-dbs.html
+
+** Using our new Lua debbuger: LuaProbe, we made an Emacs package for it
+- *Link:* https://github.com/PlugwiseBV/LuaProbe.el
+- (
+
+** Package announcement: go-prettify-mode.el
+- *Link:* https://codeberg.org/snyssfx/go-prettify-mode.el
+- (
+
+** Emails in Emacs (speziell Proton Mail) | Jan Iversen
+- *Link:* https://jan-iversen.de/2026/04/30/emails-in-emacs-speziell-proton.html
+- (
+
+** James Dyer: A Tiny Header line Tweak: Image Dimensions in image mode
+- *Link:* https://emacs.dyerdwelling.family/emacs/20260430074958-emacs&#45;&#45;a-tiny-header-line-tweak:-image-dimensions-in-image-mode/
+
+** Server play support in nethack-el
+- *Link:* https://old.reddit.com/r/nethack/comments/1seiwro/server_play_support_in_nethackel/
+- Help lobby for support on popular Nethack servers
+
+** macher-agent: Similar to gptel-agent but within the macher context
+- *Link:* https://github.com/elij/macher-agent
+- (
+
+** adds $ completion for Codex skills in agent-shell buffers
+- *Link:* https://github.com/nohzafk/agent-shell-codex-skills
+- (
+
+** Emacs manager for OpenAI Codex conversations
+- *Link:* https://github.com/dgillis/emacs-codex-ide
+- (
+
+** anvil.el v1.0.0 — first stable, anvil-ide split, anvil-pkg sister, and a no-Emacs path via NeLisp
+- *Link:* https://github.com/zawatton/anvil.el/releases/tag/v1.0.0
+- (
+
+** Free Software Tools: How I got into Emacs (and Free Software)
+- *Link:* https://fsworkingnotes.blogspot.com/2026/04/how-i-got-into-emacs-and-free-software.html
+- (
+
+** Eric MacAdie: Emacs Carnival: History and Thoughts on Starter Kits
+- *Link:* https://macadie.info/2026/04/30/emacs-carnival-history-and-thoughts-on-start-kits/
+
+** The gravitational pull of Emacs — baty.net
+- *Link:* https://baty.net/posts/2024/06/the-gravitational-pull-of-emacs/
+- (
+
+** Kent Pitman and Ramin Honary join on #commonLisp #lisp #IDE #emacs #schemacs #UX #lispyGopherClimate - toobnix
+- *Link:* https://toobnix.org/w/eCCvKBZvuwkXj244ojjzTU
+- (
+
+** SimHacker/NeMACS: UniPress Emacs 2.20 for NeWS · GitHub (released 1989)
+- *Link:* https://github.com/SimHacker/NeMACS
+- (
+
+** Kent Pitman #demo 1977-1984 #MIT #ITS #DDT #TECO #EMACS #LISP #MACLISP - toobnix
+- *Link:* https://toobnix.org/w/c7AV5CfaYYJaX1gqV4B9L1
+- (
+
+** A Report on Burnout in Open Source Software Communities (2025, PDF)
+- *Link:* https://mirandaheath.website/static/oss_burnout_report_mh_25.pdf
+- (
+
+** Emacs 30 Now On Android - Linux Renaissance
+- *Link:* https://watch.linuxrenaissance.com/w/nsuuTDvxVB74ZefZZcwZ1L
+- (
+
+** The emacs-31 branch will be cut in one week
+- *Link:* https://lists.gnu.org/archive/html/emacs-devel/2026-04/msg01089.html
+- (
+
+** Demote 'completion-preview-is-calling'
+- *Link:* https://git.savannah.gnu.org/cgit/emacs.git/commit/etc/NEWS?id=939e5956d98e8fa5aae974a5bb17d9cf0488f06d
+
+** keymap-popup
+- *Link:* https://elpa.gnu.org/packages/keymap-popup.html
+- Described keymaps with popup help (GNU ELPA)
+
+** outline-stars
+- *Link:* https://melpa.org/#/outline-stars
+- Outshine-style star headings for outline-minor-mode (MELPA)
+
+** emacs-devel
+- *Link:* https://lists.gnu.org/archive/html/emacs-devel/2026-05
+- . Thanks to Andrés Ramírez for emacs-devel links. Do you have an Emacs-related link or announcement? Please e-mail me at
+
+** people's favourite Emacs packages
+- *Link:* https://lobste.rs/s/sz3gab/what_are_your_favorite_emacs_packages
+- and that sparked similar conversations on
+
+** inspiration
+- *Link:* https://www.reddit.com/r/emacs/comments/1ssfwpl/your_sources_for_inspiration/
+- . I added a couple of small improvements to my config based on this week's Emacs news, like
+
+** Join Org mode contributor liaison team and help maintaining Org mode
+- *Link:* https://www.reddit.com/r/orgmode/comments/1sv385n/join_org_mode_contributor_liaison_team_and_help/
+
+** Battle of the Editors - Satellite Event
+- *Link:* https://www.dkz2r.de/events/2026-06-30_battle_of-the_editors
+- Tue Jun 30 4:30 PM Aachen, Seffenterweg 23 / Kopernikusstr. 6 (IT Center) for hackathon participants and guests
+
+** What are some common code smells that inexperienced Elispers make?
+- *Link:* https://www.reddit.com/r/emacs/comments/1sqk352/what_are_some_common_code_smells_that/
+
+** Dave Pearson: expando.el v1.6
+- *Link:* https://blog.davep.org/2026/04/22/expando-el-v1-6.html
+- expand macro in a different window; fix keybinding
+
+** Protesilaos: Emacs livestream: Maintaining Denote, TMR, and more
+- *Link:* https://protesilaos.com/codelog/2026-04-23-emacs-spontaneous-live-denote-tmr/
+- (
+
+** yotsuba: 4chan aesthetic, this time based on the Tomorrow theme.
+- *Link:* https://github.com/Senka07/yotsuba-emacs-theme
+- (
+
+** Dave Pearson: itch.el v1.3.0
+- *Link:* https://blog.davep.org/2026/04/24/itch-el-v1-3-0.html
+- switch to the scratch buffer
+
+** Tip: repeat-map and expreg-expand (@plantarum@ottawa.place)
+- *Link:* https://ottawa.place/@plantarum/116450593361007190
+
+** Dave Pearson: blogmore.el v4.2
+- *Link:* https://blog.davep.org/2026/04/21/blogmore-el-v4-2.html
+- cycle image extensions
+
+** Dave Pearson: kbdify.el v1.0.0
+- *Link:* https://blog.davep.org/2026/04/24/kbdify-el-v1-0-0.html
+- marking up keys in Markdown
+
+** How I use org-roam - The Universe of Joshua Blais
+- *Link:* https://joshblais.com/blog/how-i-use-org-roam/
+
+** Quick tutorial to get a blog online from Org mode thanks to Org Social | Andros Fenollosa
+- *Link:* https://en.andros.dev/blog/c68f00c3/quick-tutorial-to-get-a-blog-online-from-org-mode-thanks-to-org-social/
+- (
+
+** Como colorear los bloques de código en Org-mode | Andros Fenollosa
+- *Link:* https://andros.dev/blog/2e8f5a3c/como-colorear-los-bloques-de-codigo-en-org-mode/
+- (2016
+
+** Code for org-edit-special, eglot, and Python
+- *Link:* https://github.com/joaotavora/eglot/issues/216#issuecomment-1052931508
+- (
+
+** Get ready for Orgy in 15 minutes — Bastien Guerry
+- *Link:* https://bzg.fr/en/notes/orgy-tutorial/
+- (
+
+** JC Helary
+- *Link:* https://mac4translators.blogspot.com/2026/04/blogging-with-emacs-new-take.html
+- ) - static site generator
+
+** Dave Pearson: unabbrev.el v1.0.0
+- *Link:* https://blog.davep.org/2026/04/23/unabbrev-el-v1-0-0.html
+- completing-read an abbrev
+
+** I made an Emacs completion style using nucleo, the fuzzy matcher from Helix
+- *Link:* https://github.com/kn66/nucleo-completion.el
+- (
+
+** James Dyer: Highlighting git changes in a buffer with diff-hl
+- *Link:* https://www.emacs.dyerdwelling.family/emacs/20260421070329-emacs&#45;&#45;getting-diff-hl-just-right/
+
+** Exploring Semantic & Friends in Emacs for Development Without LSP - Dyne.org TV
+- *Link:* https://tv.dyne.org/w/h4UPDWPd97oAFJ4S411b4R
+- (
+
+** Mike Olson: Fixing typescript-ts-mode in Emacs 30.2
+- *Link:* https://mwolson.org/blog/2026-04-20-fixing-typescript-ts-mode-in-emacs-30-2/
+
+** kitty-graphics.el v0.5.0: tmux support for images inside terminal Emacs and much more!
+- *Link:* https://github.com/cashmeredev/kitty-graphics.el/releases/tag/v0.5.0
+- (
+
+** Some code for working with playlists and mpc (mpd)
+- *Link:* https://codeberg.org/ablatedsprocket/gists/src/branch/main/emacs/mpc.el
+- (
+
+** claude-code-context - simple Emacs Buffer Awareness for Claude Code
+- *Link:* https://www.nth.io/luke/projects/claude-code-context/
+- (
+
+** Fortnightly Tips, Tricks, and Questions — 2026-04-21 / week 16
+- *Link:* https://www.reddit.com/r/emacs/comments/1srbipy/fortnightly_tips_tricks_and_questions_20260421/
+
+** Randy Ridenour: Emacs and the Sunk Cost Fallacy
+- *Link:* https://randyridenour.net/posts/2026-04-25-emacs-sunk-cost-fallacy.html
+- (
+
+** Emacs Philosophy and Infinite Depth with Protesilaos - The Universe of Joshua Blais
+- *Link:* https://joshblais.com/blog/emacs-philosophy-and-infinite-depth-with-protesilaos/
+- (
+
+** A month of Elisp · Perpetually Curious Blog
+- *Link:* https://lambdafoo.com/posts/2026-04-23-a-month-of-elisp.html
+
+** I made a TaskJuggler major mode for Emacs
+- *Link:* https://github.com/devrintalen/taskjuggler-mode.el
+- (
+
+** anju v1.2: center and fill menus, edit - duplicate, look up; improve mouse interactions in Emacs
+- *Link:* https://github.com/kickingvegas/anju/discussions/63
+- (
+
+** Re: About "prefixed-core" - Philip Kaludercic
+- *Link:* https://yhetil.org/emacs-devel/871pg0wlw1.fsf@posteo.net/
+
+** emacs-devel
+- *Link:* https://lists.gnu.org/archive/html/emacs-devel/2026-04
+- . Thanks to Andrés Ramírez for emacs-devel links. Do you have an Emacs-related link or announcement? Please e-mail me at
+
+** How do you keep track of new/useful keybindings?
+- *Link:* https://www.reddit.com/r/emacs/comments/1sn91ey/how_do_you_keep_track_of_newuseful_keybindings/
+
+** Meow Made me Leave Evil-Mode - The Universe of Joshua Blais
+- *Link:* https://joshblais.com/blog/meow-in-emacs/
+- (
+
+** Updated kickingvegas/elisp-for-python - improved sections on map types and iteration
+- *Link:* https://github.com/kickingvegas/elisp-for-python#iteration
+- (
+
+** load settings from files sorted by number
+- *Link:* https://portal.mozz.us/gemini//omg.pebcak.club/~cage/archive/organizzazione-configurazione-emacs.gmi
+- (
+
+** dmsg.el: Timestamped debug messages with backtrace support
+- *Link:* https://github.com/haji-ali/dmsg.el
+- (
+
+** Defining λ as a macro for lambda
+- *Link:* https://codeberg.org/mrb/emacs-config/commit/c52b4ee
+- (
+
+** Listful Andrew: Mars Rovers IV: The Solutions — Emacs Lisp
+- *Link:* https://flandrew.srht.site/listful/mars-rovers-iv-the-solutions-emacs-lisp.html
+
+** Listful Andrew: Mars Rovers IX: The Grid Viz Solutions — Emacs Lisp
+- *Link:* https://flandrew.srht.site/listful/mars-rovers-ix-the-grid-viz-solutions-emacs-lisp.html
+
+** Loading the theme and user face customizations at the right moment
+- *Link:* https://www.reddit.com/r/emacs/comments/1slkgi4/loading_the_theme_and_user_face_customizations_at/
+
+** Protesilaos Stavrou: Emacs: new modus-themes-exporter package
+- *Link:* https://protesilaos.com/codelog/2026-04-13-emacs-live-develop-modus-themes-exporter-package/
+- (
+
+** faff theme v4.0; now using modus-themes
+- *Link:* https://github.com/WJCFerguson/emacs-faff-theme
+- (
+
+** folio-theme: a warm paper-like light theme for Emacs
+- *Link:* https://github.com/kn66/folio-theme.el
+- (
+
+** Tip about using consult-focus-lines
+- *Link:* https://mstdn.social/@paniash/116415994916152273
+
+** Marcin Borkowski: Binding TAB in Dired to something useful
+- *Link:* https://mbork.pl/2026-04-13_Binding_TAB_in_Dired_to_something_useful
+- (
+
+** James Dyer: Emacs-DIYer: A Built-in dired-collapse Replacement
+- *Link:* https://www.emacs.dyerdwelling.family/emacs/20260409104443-emacs&#45;&#45;emacs-diyer-a-built-in-dired-collapse-replacement/
+
+** casual 2.16.0: improvements to Dired for marked file operations and context-sensitive behavior
+- *Link:* https://github.com/kickingvegas/casual/discussions/452
+- (
+
+** Dave Pearson: boxquote.el v2.4
+- *Link:* https://blog.davep.org/2026/04/16/boxquote-el-v2-4.html
+- added a transient
+
+** Dave Pearson: blogmore.el v4.1
+- *Link:* https://blog.davep.org/2026/04/17/blogmore-el-v4-1.html
+- change image extension to webp
+
+** Launching a new grammar/spell checking tool for Org-mode, LaTeX, Markdown, Python, Clang, etc.
+- *Link:* https://github.com/alberti42/emacs-ltex-plus
+- (
+
+** ekg version 0.9.0: New notes UI, Apple Notes Syncing, agentic actions and org integration
+- *Link:* https://www.reddit.com/r/emacs/comments/1sneddx/ekg_version_090_new_notes_ui_apple_notes_syncing/
+- (
+
+** Organizing my retirement with org-mode – Andy Sylvester's Web
+- *Link:* https://andysylvester.com/2026/04/16/organizing-my-retirement-with-org-mode/
+
+** folgezett.el a package for Org-Roam users
+- *Link:* https://github.com/landerwells/folgezett.el
+- (
+
+** Avoiding mismatched Org versions by removing ELPA/MELPA packages and other Org performance tips
+- *Link:* https://orgmode.org/worg/org-performance.html
+- (
+
+** #28 bbb:OrgMeetup on Wed, March 11, 19:00 UTC+3 - meeting notes
+- *Link:* https://list.orgmode.org/87y0ijp82r.fsf@localhost/T/#u
+- (
+
+** Org Mode requests: [RFC] Drop GoogleCL from LoB + ideas for a replacement?
+- *Link:* https://list.orgmode.org/877bq98dz6.fsf@christianmoe.com
+
+** James Endres Howell: Embedding a Mastodon thread as comments to a blog post
+- *Link:* https://jamesendreshowell.com/2026-04-15-embedding-a-mastodon-thread-as-comments-to-a-blog-post.html
+- org-static-blog-emfed
+
+** Recent Features Added to lazyblorg (Static Blog Generator)
+- *Link:* https://karl-voit.at/2026/04/19/lazyblorg-recent-features
+- (
+
+** lobste.rs
+- *Link:* https://lobste.rs/s/xitxrt/hot_wiring_lisp_machine
+- ) - modifying publishing
+
+** New function org–forward-sentence-thing-at-point-provider
+- *Link:* https://git.savannah.gnu.org/cgit/emacs/org-mode.git/commit/etc/ORG-NEWS?id=e6f19e233d6718af0f695a6debfb520fd6233ef2
+
+** Completion is a Substrate, not a UI
+- *Link:* https://www.chiply.dev/post-icr-primer
+- (
+
+** VOMPECCC: A Modular Completion Framework for Emacs
+- *Link:* https://www.chiply.dev/post-vompeccc
+- (
+
+** New Package: eglot-rcpp for simplifying Rcpp package development in emacs
+- *Link:* https://github.com/jsilve24/eglot-rcpp
+- (
+
+** Shipit update: Atlassian Dashboard for Jira, PR↔issue linking, and activity-level notification navigation
+- *Link:* https://www.reddit.com/r/emacs/comments/1spozy5/shipit_update_atlassian_dashboard_for_jira/
+
+** [Showcase] k8s-to-puml: Deterministic Kubernetes diagrams from your manifests using Tree-sitter and GOFAI rules
+- *Link:* https://github.com/jeremias-a-queiroz/k8s-to-puml
+- (
+
+** Gal Buki: Clipboard in terminal Emacs with WezTerm
+- *Link:* https://www.galbuki.ch/blog/clipboard-in-terminal-emacs-with-wezterm&#45;&#45;20260415.html
+
+** paw browser extension can now manage tabs and send tab info, copy links to Emacs
+- *Link:* https://github.com/chenyanming/paw_browser_extension
+- (
+
+** My Doom Emacs config for software development — 150 lines covering LSP, Magit, org-roam, and a custom dashboard
+- *Link:* https://www.reddit.com/r/emacs/comments/1sm9cg8/my_doom_emacs_config_for_software_development_150/
+
+** Dave Pearson: wordcloud.el v1.4
+- *Link:* https://blog.davep.org/2026/04/14/wordcloud-el-v1-4.html
+
+** Dave Pearson: slstats.el v1.11
+- *Link:* https://blog.davep.org/2026/04/15/slstats-el-v1-11.html
+- Second Life grid
+
+** Agentic development workflow in Emacs
+- *Link:* https://20y.hu/~slink/journal/agent-shell/index.html
+
+** anvil.el — Forge Emacs into Claude Code's weapon
+- *Link:* https://github.com/zawatton/anvil.el
+- (
+
+** Headless Emacs + Org + LLMs in Docker as a backend for personal automation
+- *Link:* https://github.com/SemyonSinchenko/sem-assistant-el
+- (
+
+** Announcing llm-test, a very high-level testing framework for Emacs
+- *Link:* https://github.com/ahyatt/llm-test
+- (
+
+** Cocinándose la renovación de la Web… | Hacia la Hispa-Emacs Conf. 2026 !
+- *Link:* https://hispa-emacs.org/2026-04-15-Cocin%C3%A1ndose-la-renovaci%C3%B3n-de-la-Web.html
+- (
+
+** Eric MacAdie: 2026-04 Austin Emacs Meetup
+- *Link:* https://macadie.info/2026/04/19/2026-04-austin-emacs-meetup/
+
+** 26: Why You'll Never Switch Editors (And What You're Missing)
+- *Link:* https://www.buzzsprout.com/2469780/episodes/19034506
+
+** Tip about setting w32-use-visible-system-caret to nil on Windows
+- *Link:* https://mementomori.social/@tml/116416045226298692
+
+** # omarchy.el - Emacs integration for Omarchy
+- *Link:* https://github.com/ovistoica/omarchy.el
+- (
+
+** trust-manager.el — Towards Trust in Emacs
+- *Link:* https://eshelyaron.com/posts/2026-04-15-towards-trust-in-emacs.html
+- (
+
+** long discussion on emacs-devel
+- *Link:* https://lists.gnu.org/archive/html/emacs-devel/2026-04/msg00252.html
+- )
+
+** emskin: a nested Wayland compositor in Rust that embeds any app into Emacs windows
+- *Link:* https://github.com/emskin/emskin
+- (
+
+** Dave's blog: Posframe for everything
+- *Link:* https://davemq.github.io/2026/04/14/posframe-everything.html
+
+** External loops and Emacs: state machines vs two C stacks - Vladimir Kazanov
+- *Link:* https://yhetil.org/emacs-devel/CAAs=0-1y8fUJEVbwpXsVYiPH-QGAs2XTYMVJPGOD04AFRehCAA@mail.gmail.com/
+
+** Re: Alternative Emacs logo - Philip Kaludercic
+- *Link:* https://yhetil.org/emacs-devel/87ldej9zfk.fsf@posteo.net/
+- (
+
+** RE: Translation of manuals (was: SES manual French translation) - Vincent Belaïche
+- *Link:* https://yhetil.org/emacs-devel/AMBP194MB2691031FB5AFFB0B1B50610A84232@AMBP194MB2691.EURP194.PROD.OUTLOOK.COM/
+- texinfo bug for UTF-8
+
+** What is the absolute minimum to cover in first emacs session
+- *Link:* https://www.reddit.com/r/emacs/comments/1sjcnfz/what_is_the_abolsute_minimum_to_cover_in_first/
+
+** Cómo aprender Emacs gráficamente gracias a Sacha Chua
+- *Link:* https://maxxcan.codeberg.page/2026-04-09-c%C3%B3mo-aprender-emacs-gr%C3%A1ficamente-gracias-a-sacha-chua.html
+- (
+
+** Dave Pearson: expando.el v1.5
+- *Link:* https://blog.davep.org/2026/04/06/expando-el-v1-5.html
+- macroexpand and pretty-print
+
+** Charles Choi: Computing Days Until with Emacs
+- *Link:* http://yummymelon.com/devnull/computing-days-until-with-emacs.html
+- (
+
+** Listful Andrew: Counting Words V: More solutions in Emacs Lisp
+- *Link:* https://flandrew.srht.site/listful/counting-words-v-more-solutions-in-emacs-lisp.html
+
+** Listful Andrew: Phones-to-Words Challenge V: Clojure-inspired Emacs Lisp
+- *Link:* https://flandrew.srht.site/listful/phones-to-words-challenge-v-clojure-inspired-emacs-lisp.html
+
+** Dave Pearson: quiz.el v1.7
+- *Link:* https://blog.davep.org/2026/04/08/quiz-el-v1-7.html
+- how to use :extend t to make a face extend to the edge
+
+** Ember for Emacs - A warm, nearly monochrome Doom Emacs theme.
+- *Link:* https://github.com/ember-theme/emacs
+- (
+
+** Dave Pearson: fasta.el v1.1
+- *Link:* https://blog.davep.org/2026/04/08/fasta-el-v1-1.html
+- bioinformatics: font-locking sequences
+
+** Protesilaos Stavrou: Emacs modus-themes live stream
+- *Link:* https://protesilaos.com/codelog/2026-04-10-emacs-spontaneous-live-modus-themes/
+- (
+
+** Tip about closing multiple Emacs buffers
+- *Link:* https://cyberplace.social/@khleedril/116368251651750021
+
+** vincentjgoh/avy-dashboard: avy keys for emacs dashboard · GitHub
+- *Link:* https://github.com/vincentjgoh/avy-dashboard
+- (
+
+** Charles Choi: Calming Mouse Interaction in Dired
+- *Link:* http://yummymelon.com/devnull/calming-mouse-interaction-in-dired.html
+
+** Tip about using Emacs to enter Unicode
+- *Link:* https://writeout.ink/@ljwrites/116390506294899631
+
+** Dave Pearson: blogmore.el v4.0
+- *Link:* https://blog.davep.org/2026/04/06/blogmore-el-v4-0.html
+- more public utility functions
+
+** overleaf.el 1.1.5
+- *Link:* https://github.com/vale981/overleaf.el/releases/tag/v1.1.5
+- 3-way conflict resolution
+
+** Protesilaos Stavrou: Emacs live stream for writing Denote tests and more
+- *Link:* https://protesilaos.com/codelog/2026-04-06-emacs-spontaneous-live-tonight-denote/
+- (
+
+** Org Mode requests: [RFC] Should org-forward/backward-sentence respect element boundaries?
+- *Link:* https://list.orgmode.org/87ldety46b.fsf@localhost
+
+** org-mindmap — simple inline mind maps for Org
+- *Link:* https://github.com/krvkir/org-mindmap
+- (
+
+** The issues with issue trackers — Bastien Guerry
+- *Link:* https://bzg.fr/en/notes/the-issue-with-issue-trackers/
+- (
+
+** Emacs 31.x Orgmode version mismatch - Blog In Isolation
+- *Link:* https://www.yakshaving.co.uk/posts/emacs-31-orgmode-version-mismatch/
+- (
+
+** I built a Things 3-inspired web frontend for org-agenda (looking for feedback)
+- *Link:* https://github.com/adithyabhatkajake/emacs-agenda-viewer
+- (
+
+** Tutorial para blogear como Notxor
+- *Link:* https://notxor.nueva-actitud.org/2022/11/17/tutorial-para-blogear-como-notxor.html
+- (
+
+** GitHub - steve-downey/surround: Surround Source Code for org-transclusion
+- *Link:* https://github.com/steve-downey/surround
+- (
+
+** Tip about org-babel-remote-temporary-directory
+- *Link:* https://ottawa.place/@plantarum/116363808900997869
+
+** Embark Org shortcut for displaying difference between timestamp and today
+- *Link:* https://corteximplant.com/@Viiru/116375879687899687
+
+** djgoku/compilation-history: Automatic compilation history tracking for Emacs with searchable SQLite-backed storage. · GitHub
+- *Link:* https://github.com/djgoku/compilation-history
+- (
+
+** James Dyer: Wiring Flymake Diagnostics into a Follow Mode
+- *Link:* https://www.emacs.dyerdwelling.family/emacs/20260409061315-emacs&#45;&#45;wiring-flymake-diagnostics-into-a-follow-mode/
+
+** Jeremias-A-Queiroz/flymake-kubeconform: real-time validation of Kubernetes manifests using kubeconform
+- *Link:* https://github.com/Jeremias-A-Queiroz/flymake-kubeconform
+- (
+
+** Git fixup is magic (and Magit is too)
+- *Link:* https://arialdomartini.github.io/git-fixup
+- (
+
+** ESR v1.0.0: An R tree sitter mode
+- *Link:* https://codeberg.org/teoten/esr
+- (
+
+** [Ann] New package Popterm [posframe+terminal]​
+- *Link:* https://github.com/CsBigDataHub/popterm.el
+- (
+
+** Show: How I added a list of other vterm buffers in the modeline
+- *Link:* https://i.redd.it/g1libuss8cug1.png
+
+** kitty-graphics.el v0.4.0: Sixel support, text sizing protocol, agent-shell integration
+- *Link:* https://cashmere.rs/blog/kitty-graphicsel-v040-sixel-text-sizing-and-agent-shell
+- (
+
+** EWW! A Web in My Editor! « Here's The Beef
+- *Link:* http://perotti.org/2026/04/09/eww-a-web-in-my-editor/
+- (
+
+** evim — multiple cursors for evil-mode, inspired by vim-visual-multi (now on MELPA)
+- *Link:* https://github.com/Prgebish/evim
+- (
+
+** evil-matchit 4.1.0 is published
+- *Link:* https://github.com/redguardtoo/evil-matchit
+- (
+
+** [21] Working on Canvas Patch (Contd..) - 4/6/2026, 3:33:42 PM - Dyne.org TV
+- *Link:* https://tv.dyne.org/w/jteKsdgPMWECZc1GKKn9Jj
+- and
+
+** Server play support in nethack-el
+- *Link:* https://github.com/Feyorsh/nethack-el
+- (
+
+** ann new packages: agent-shell-dispatch and agent-shell-ediff
+- *Link:* https://www.reddit.com/r/emacs/comments/1sgprd7/ann_new_packages_agentshelldispatch_and/
+
+** bajsicki/gptel-got: Tooling for LLM interactions with org-mode
+- *Link:* https://codeberg.org/bajsicki/gptel-got
+
+** I forced Claude to play Tetris in Emacs.
+- *Link:* https://github.com/agzam/death-contraptions/tree/main/tools/elisp-eval
+- (
+
+** Fortnightly Tips, Tricks, and Questions — 2026-04-07 / week 14
+- *Link:* https://www.reddit.com/r/emacs/comments/1sek30r/fortnightly_tips_tricks_and_questions_20260407/
+
+** Raising a few $thousand to keep version control magical
+- *Link:* https://github.com/magit/magit/issues/5555
+- (
+
+** Chris Maiorana: The Emacs Way: Deleting Files
+- *Link:* https://chrismaiorana.com/the-emacs-way-deleting-files/
+
+** Erik L. Arneson: Emacs as the Freelancer's Command Center
+- *Link:* https://arnesonium.com/2026/04/emacs-freelance-command-center
+
+** senchawizard/emacs-polydiceware: generate passwords with dice
+- *Link:* https://codeberg.org/senchawizard/emacs-polydiceware
+- (
+
+** I built an Emacs auth-source backend for 1Password (tested on macOS)
+- *Link:* https://github.com/renatgalimov/op.el
+- (
+
+** Few tips for faster Emacs install with MSYS2
+- *Link:* https://www.reddit.com/r/emacs/comments/1si7wvs/few_tips_for_faster_emacs_install_with_msys2/
+
+** Re: On keybindings and the slow erosion of help's utility - Jonas Bernoulli
+- *Link:* https://yhetil.org/emacs-devel/87341d81e4.fsf@bernoul.li/
+- it would be great to get where-is to work with transient suffixes
+
+** Terminology changes from a long time ago: window, pane; frame, window
+- *Link:* https://yhetil.org/emacs-devel/E1w8UHv-0000fM-1D@fencepost.gnu.org/
+
+** This might be a workaround
+- *Link:* https://github.com/califio/publications/blob/main/MADBugs/vim-vs-emacs-vs-claude/Emacs.md
+- if you want, and in the meantime,
+don't check out git repositories you don't trust.
+There's no page for the
+
+** Emacs Carnival
+- *Link:* https://www.emacswiki.org/emacs/Carnival
+- for April
+yet, but you can start thinking about the theme of
+"newbies/starter kits" already, and I'm sure Cena
+or someone will round things up afterwards. Enjoy!
+
+** Protesilaos Stavrou: Emacs live stream with Sacha Chua on 2026-04-16 17:30 Europe/Athens
+- *Link:* https://protesilaos.com/codelog/2026-04-04-emacs-live-with-sacha-chua/
+
+** backpack 0.4.0 - adds self-documenting inventory browser
+- *Link:* https://github.com/shackra/backpack
+- (
+
+** Almighty Lisp: Lisp & Emacs Essentials - almightylisp.com
+- *Link:* https://almightylisp.com/
+- (
+
+** Dave Pearson: nukneval.el v1.3
+- *Link:* https://blog.davep.org/2026/04/03/nukneval-el-v1-3.html
+- unload and re-evaluate
+
+** How to run a function when my buffer selection changes?
+- *Link:* https://www.reddit.com/r/emacs/comments/1sduilc/how_to_run_a_function_when_my_buffer_selection/
+- updated with window-state-change-hook
+
+** occult.el - collapse buffer regions into single-line summaries
+- *Link:* https://github.com/agzam/occult.el
+- (
+
+** Tip about using other-window-prefix C-x 4 4
+- *Link:* https://snac.lab8.cz/mattof/p/1775377168.159080
+
+** Curtis McHale: Check Spelling in Emacs
+- *Link:* https://curtismchale.ca/2026/03/31/check-spelling-in-emacs
+- (
+
+** Dave Pearson: blogmore.el v3.1
+- *Link:* https://blog.davep.org/2026/04/05/blogmore-el-v3-1.html
+
+** Protesilaos Stavrou: Emacs: new sequence scheme for the ‘denote-sequence’ package
+- *Link:* https://protesilaos.com/codelog/2026-04-03-emacs-denote-sequence-new-alphanumeric-delimited-scheme/
+
+** aravindps/org-gtd: Things 3 style GTD for Emacs — org-mode agenda views, ⌘ keybindings, context tags. Works with Doom and vanilla Emacs. · GitHub
+- *Link:* https://github.com/aravindps/org-gtd
+- (
+
+** [BLOG] #27 bbb:OrgMeetup on Wed, February 11, 19:00 UTC+3 - Ihor Radchenko
+- *Link:* https://list.orgmode.org/orgmode/87pl4lul8r.fsf@localhost/
+- (
+
+** lopeztel/ox-dnd-html: Emacs export org files to D&D themed html · GitHub
+- *Link:* https://github.com/lopeztel/ox-dnd-html
+- (
+
+** James Endres Howell: My first advice! (in Emacs Lisp)
+- *Link:* https://jamesendreshowell.com/2026-04-04-my-first-advice-in-emacs-lisp.html
+- specifying HTML boilerplace for org-static-blog
+
+** RSS feeds for your org-mode website
+- *Link:* https://thibaut.dev/blog/org-publish-rss.html
+- (
+
+** [RELEASE] let-completion v0.2.0: full overhaul of Elisp completion - 46 binding forms, function argument candidates, expandable registry, fully customizable two-column annotations
+- *Link:* https://github.com/gggion/let-completion.el
+- (
+
+** rougier/nano-vertico: Emacs / nano + vertico · GitHub
+- *Link:* https://github.com/rougier/nano-vertico
+- (
+
+** Mike Olson - eglot-python-preset and eglot-typescript-preset: Now on MELPA
+- *Link:* https://mwolson.org/blog/2026-04-02-eglot-python-preset-and-eglot-typescript-preset-now-on-melpa/
+- (
+
+** Function to make eglot add IWYU headers without doing an autocomplete in the buffer
+- *Link:* https://www.reddit.com/r/emacs/comments/1sano0b/function_to_make_eglot_add_iwyu_headers_without/
+
+** Dave Pearson: make-phony.el v1.3
+- *Link:* https://blog.davep.org/2026/04/03/make-phony-el-v1-3.html
+- for Makefiles
+
+** Ghostel - terminal emulator powered by libghostty
+- *Link:* https://github.com/dakra/ghostel
+- (
+
+** Thanos Apollo: Bringing jabber.el Back From the Dead
+- *Link:* https://thanosapollo.org/posts/emacs-jabber-revival/
+- (
+
+** Anybody interested in writing SDL games in Emacs Lisp?
+- *Link:* https://www.reddit.com/r/emacs/comments/1s8kox8/anybody_interested_in_writing_sdl_games_in_emacs/
+
+** Emacs + SDL: unblocking the unblockable
+- *Link:* https://www.reddit.com/r/emacs/comments/1sc2dfx/emacs_sdl_unblocking_the_unblockable/
+- (
+
+** Dave Pearson: eg.el v1.2
+- *Link:* https://blog.davep.org/2026/03/31/eg-el-v1-2.html
+- Norton Guide?
+
+** thinks.el v1.13
+- *Link:* https://blog.davep.org/2026/03/31/thinks-el-v1-13.html
+- thought bubbles
+
+** binclock.el v1.12
+- *Link:* https://blog.davep.org/2026/04/01/binclock-el-v1-12.html
+- binary clock
+
+** obfusurl.el v2.2
+- *Link:* https://blog.davep.org/2026/04/01/obfusurl-el-v2-2.html
+- obfuscating URLs
+
+** The Agent-Native Editor Was Invented in 1976
+- *Link:* https://noquiche.fyi/emacs-for-agents
+
+** Protesilaos Stavrou: Emacs coaching with Sacha Chua
+- *Link:* https://protesilaos.com/codelog/2026-03-31-emacs-coaching-with-sacha-chua/
+
+** Emacs Carnival March 2026: Mistakes and Misconceptions
+- *Link:* https://sdf.org/~pkal/blog/emacs/mistakes.html
+
+** Christian Tietze: Emacs Mistakes and Misconceptions That Held Me Back in 2019
+- *Link:* https://christiantietze.de/posts/2026/03/emacs-mistakes-and-misconceptions-that-held-me-back-in-2018/
+
+** Einar Mostad: Emacs mistakes and misconceptions
+- *Link:* https://einar.codeberg.page/emacs-mistakes-and-misconceptions.html
+
+** Alvaro Ramirez: …and then there were three (expect delays)
+- *Link:* https://xenodium.com/and-then-there-were-three
+- (
+
+** Thanos Apollo: Gnosis 0.10: Import Anki, Merge Everything Into One
+- *Link:* https://thanosapollo.org/posts/gnosis-8-to-10/
+
+** On keybindings and the slow erosion of help's utility
+- *Link:* https://lists.gnu.org/archive/html/emacs-devel/2026-03/msg01121.html
+- long discussion
+
+* Package Ecosystem
+
+** Tracked Package Releases
+
+*** transient: v0.13.2
+:PROPERTIES:
+:DATE: 2026-05-01
+:END:
+- *Link:* https://github.com/magit/transient/releases/tag/v0.13.2
+
+*** transient: v0.13.1
+:PROPERTIES:
+:DATE: 2026-05-01
+:END:
+- *Link:* https://github.com/magit/transient/releases/tag/v0.13.1
+
+*** transient: v0.13.0
+:PROPERTIES:
+:DATE: 2026-04-22
+:END:
+- *Link:* https://github.com/magit/transient/releases/tag/v0.13.0
+
+*** org-mode: release_9.8.4
+:PROPERTIES:
+:DATE: 2026-05-02
+:END:
+- *Link:* https://github.com/bzg/org-mode/releases/tag/release_9.8.4
+
+*** org-mode: release_9.8.3
+:PROPERTIES:
+:DATE: 2026-04-18
+:END:
+- *Link:* https://github.com/bzg/org-mode/releases/tag/release_9.8.3
+
+*** org-mode: release_9.8.2
+:PROPERTIES:
+:DATE: 2026-04-11
+:END:
+- *Link:* https://github.com/bzg/org-mode/releases/tag/release_9.8.2
+
+** New on MELPA
+
+*** recipe
+:PROPERTIES:
+:DATE: 2026-05-03
+:END:
+- *MELPA:* https://melpa.org/#/recipe
+
+*** recipe
+:PROPERTIES:
+:DATE: 2026-05-03
+:END:
+- *MELPA:* https://melpa.org/#/recipe
+
+*** recipe
+:PROPERTIES:
+:DATE: 2026-05-03
+:END:
+- *MELPA:* https://melpa.org/#/recipe
+
+*** recipe
+:PROPERTIES:
+:DATE: 2026-05-03
+:END:
+- *MELPA:* https://melpa.org/#/recipe
+
+*** recipe
+:PROPERTIES:
+:DATE: 2026-05-03
+:END:
+- *MELPA:* https://melpa.org/#/recipe
+
+*** recipe
+:PROPERTIES:
+:DATE: 2026-05-03
+:END:
+- *MELPA:* https://melpa.org/#/recipe
+
+*** recipe
+:PROPERTIES:
+:DATE: 2026-05-03
+:END:
+- *MELPA:* https://melpa.org/#/recipe
+
+*** recipe
+:PROPERTIES:
+:DATE: 2026-05-03
+:END:
+- *MELPA:* https://melpa.org/#/recipe
+
+*** recipe
+:PROPERTIES:
+:DATE: 2026-05-01
+:END:
+- *MELPA:* https://melpa.org/#/recipe
+
+* Upstream Discussions (emacs-devel)
+
+** Proposal: HTTPS URLs of the GNU and NonGNU ELPA source code repositories
+- *Author:* Roi Martin (jroi.martin@gmail.com)
+- *Link:* https://yhetil.org/emacs-devel/87h5okd3mp.fsf@gmail.com/
+- *Summary:* A proposal to update the GNU and NonGNU ELPA source code repositories to use HTTPS URLs for enhanced security.
+
+** Discussion: Tail recursion
+- *Author:* Stefan Monnier (monnier@iro.umontreal.ca)
+- *Link:* https://yhetil.org/emacs-devel/jwvmrycr6n0.fsf-monnier+emacs@gnu.org/
+- *Summary:* A technical discussion about tail recursion optimization in Emacs Lisp.
+

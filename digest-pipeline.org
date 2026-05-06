@@ -1,0 +1,1198 @@
+#+TITLE: Sovereign Digest: Emacs Edition
+#+AUTHOR: Caleb
+#+DESCRIPTION: A local-first, LLM-powered digest generator for Emacs news.
+#+PROPERTY: header-args:python :session *digest-py* :results output
+#+PROPERTY: header-args:python+ :python ~/.pyenv/versions/digest-env/bin/python
+
+* 1. System Infrastructure & Prerequisites
+
+WSL2 Debian 13 setup. Run these blocks once. Ollama auto-detects the RTX 5070Ti
+via the CUDA libraries it bundles — no manual CUDA install needed.
+
+** 1.1 Ollama + CUDA
+
+#+begin_src sh :results output
+# Install Ollama (bundles its own CUDA runtime; no apt cuda packages needed)
+curl -fsSL https://ollama.com/install.sh | sh
+
+# Verify GPU is visible to Ollama — should show your 5070Ti
+ollama ps
+#+end_src
+
+** 1.2 Python Environment
+
+#+begin_src sh :results output
+# Create an isolated pyenv virtualenv (pyenv assumed already installed)
+pyenv virtualenv 3.12.3 digest-env
+
+# Install all required packages into it
+~/.pyenv/versions/digest-env/bin/pip install \
+    ollama \
+    requests \
+    feedparser \
+    python-dotenv
+#+end_src
+
+** 1.3 Models
+
+Two-model strategy: a *coder* model for structured JSON classification/triage,
+and a *general* instruct model for prose summaries that capture nuance.
+
+With 16 GB VRAM the 5070Ti can run either model at Q5_K_M (~9 GB) cleanly.
+The =MODEL_TRIAGE= and =MODEL_SUMMARY= constants in Section 2 are the only
+things to change if you swap quants.
+
+#+begin_src sh :results output
+# Coder model — strict JSON schema adherence for triage/classification
+ollama pull qwen2.5-coder:14b-instruct-q5_K_M
+
+# General instruct model — richer prose for summaries
+ollama pull qwen2.5:14b-instruct-q5_K_M
+#+end_src
+
+** 1.4 Reddit API Access (Optional)
+
+The pipeline works out of the box using Reddit's public JSON endpoints (~10
+req/min). For higher rate limits (60 req/min), you can optionally configure
+OAuth by creating a "script" type application at
+https://www.reddit.com/prefs/apps/ — note that Reddit now requires developer
+registration which may redirect through their Devvit platform. If you have
+credentials, copy them into the =.env= file in this directory.
+
+* 2. Configuration & Cache
+
+Initialize shared constants, logging, persistent cache, API credentials, and
+helper functions. *Run this block first in every session* before any other
+Python block.
+
+#+begin_src python
+import json
+import os
+import re
+import time
+import datetime
+import logging
+import subprocess
+import shutil
+from urllib.parse import urlparse
+from html import unescape
+from time import mktime
+
+import ollama
+import requests
+import feedparser
+from dotenv import load_dotenv
+
+# ── Model & path config ────────────────────────────────────────────────────
+MODEL_TRIAGE  = "qwen2.5-coder:14b-instruct-q5_K_M"   # structured JSON triage
+MODEL_SUMMARY = "qwen2.5:14b-instruct-q5_K_M"          # nuanced prose summaries
+DAYS_AGO      = 30
+REPO_PATH     = os.path.expanduser("~/pkb/resources/emacs/digest/git-mirrors/emacs.git")
+CACHE_FILE    = os.path.expanduser("~/pkb/resources/emacs/digest/seen_ids.json")
+OUTPUT_DIR    = os.path.expanduser("~/pkb/resources/emacs/digest")
+CACHE_TTL_DAYS = 90
+
+os.makedirs(OUTPUT_DIR, exist_ok=True)
+os.makedirs(os.path.join(OUTPUT_DIR, "git-mirrors"), exist_ok=True)
+
+# ── Structured logging ─────────────────────────────────────────────────────
+log = logging.getLogger("digest")
+log.setLevel(logging.DEBUG)
+# Clear any existing handlers from prior session runs
+log.handlers.clear()
+_fmt = logging.Formatter("%(asctime)s [%(levelname)s] %(message)s", datefmt="%H:%M:%S")
+_sh = logging.StreamHandler()
+_sh.setLevel(logging.INFO)
+_sh.setFormatter(_fmt)
+log.addHandler(_sh)
+_fh = logging.FileHandler(os.path.join(OUTPUT_DIR, "digest.log"), mode="w")
+_fh.setLevel(logging.DEBUG)
+_fh.setFormatter(_fmt)
+log.addHandler(_fh)
+
+# ── Cache with TTL ─────────────────────────────────────────────────────────
+CACHE_KEYS = ["commits", "posts", "threads", "blogs", "sacha", "melpa", "releases"]
+
+def load_cache():
+    """Load cache, migrate old list format if needed, prune entries >CACHE_TTL_DAYS old."""
+    empty = {k: {} for k in CACHE_KEYS}
+    if not os.path.exists(CACHE_FILE):
+        return empty
+    with open(CACHE_FILE) as f:
+        data = json.load(f)
+    # Ensure all keys exist
+    for k in CACHE_KEYS:
+        if k not in data:
+            data[k] = {}
+    # Migrate old list-of-strings format → dict-with-dates
+    today = datetime.date.today().isoformat()
+    for k in CACHE_KEYS:
+        if isinstance(data[k], list):
+            data[k] = {item: today for item in data[k]}
+    # Prune entries older than TTL
+    cutoff = (datetime.date.today() - datetime.timedelta(days=CACHE_TTL_DAYS)).isoformat()
+    pruned = {k: {id_: d for id_, d in v.items() if d >= cutoff} for k, v in data.items()}
+    return pruned
+
+def save_cache(c):
+    with open(CACHE_FILE, "w") as f:
+        json.dump(c, f, indent=2)
+
+cache = load_cache()
+total = sum(len(v) for v in cache.values())
+log.info(f"Cache loaded: {total} seen items across all sources (TTL={CACHE_TTL_DAYS}d).")
+
+# ── Reddit access (OAuth if available, public JSON fallback) ───────────────
+load_dotenv(os.path.join(OUTPUT_DIR, ".env"))
+REDDIT_CLIENT_ID     = os.getenv("REDDIT_CLIENT_ID", "")
+REDDIT_CLIENT_SECRET = os.getenv("REDDIT_CLIENT_SECRET", "")
+REDDIT_USER_AGENT    = "script:sovereign-digest:v2.0 (by /u/calebc42-official)"
+_reddit_token        = None
+_reddit_use_oauth    = False
+
+def _try_reddit_oauth():
+    """Attempt OAuth token acquisition. Returns True on success."""
+    global _reddit_token, _reddit_use_oauth
+    if not REDDIT_CLIENT_ID or not REDDIT_CLIENT_SECRET:
+        return False
+    try:
+        resp = requests.post(
+            "https://www.reddit.com/api/v1/access_token",
+            auth=(REDDIT_CLIENT_ID, REDDIT_CLIENT_SECRET),
+            data={"grant_type": "client_credentials"},
+            headers={"User-Agent": REDDIT_USER_AGENT},
+            timeout=10,
+        )
+        resp.raise_for_status()
+        _reddit_token = resp.json()["access_token"]
+        _reddit_use_oauth = True
+        log.info("Reddit OAuth token acquired — using authenticated mode (60 req/min).")
+        return True
+    except Exception as e:
+        log.warning(f"Reddit OAuth failed ({e}) — falling back to public JSON endpoints.")
+        return False
+
+# Try OAuth on startup; fall back silently to public endpoints
+_try_reddit_oauth()
+if not _reddit_use_oauth:
+    log.info("Reddit: using unauthenticated public JSON (rate-limited to ~10 req/min).")
+    log.info("  To upgrade: set REDDIT_CLIENT_ID/SECRET in .env (requires Reddit API app).")
+
+def reddit_get(path, params=None, max_retries=3):
+    """GET Reddit data. Uses OAuth if available, otherwise public JSON with fallback."""
+    global _reddit_token, _reddit_use_oauth
+
+    for attempt in range(max_retries):
+        try:
+            if _reddit_use_oauth:
+                resp = requests.get(
+                    f"https://oauth.reddit.com{path}",
+                    headers={
+                        "Authorization": f"bearer {_reddit_token}",
+                        "User-Agent": REDDIT_USER_AGENT,
+                    },
+                    params=params, timeout=15,
+                )
+                if resp.status_code == 401:
+                    log.warning("Reddit token expired, re-acquiring...")
+                    if _try_reddit_oauth():
+                        continue
+                    _reddit_use_oauth = False  # degrade to public
+            if not _reddit_use_oauth:
+                # Public JSON fallback — try www then old.reddit.com
+                # Build the URL: path like "/r/emacs/top" + ".json"
+                json_path = path if path.endswith(".json") else path + ".json"
+                for base in ["https://www.reddit.com", "https://old.reddit.com"]:
+                    resp = requests.get(
+                        f"{base}{json_path}",
+                        headers={"User-Agent": REDDIT_USER_AGENT},
+                        params=params, timeout=15,
+                    )
+                    if resp.ok:
+                        break
+
+            if resp.status_code == 429:
+                wait = (2 ** attempt)
+                log.warning(f"Reddit 429 — backing off {wait}s (attempt {attempt+1})")
+                time.sleep(wait)
+                continue
+            resp.raise_for_status()
+            return resp.json()
+        except requests.RequestException as e:
+            wait = (2 ** attempt)
+            log.warning(f"Reddit request failed: {e} — retry in {wait}s")
+            time.sleep(wait)
+
+    log.error(f"Reddit GET {path} failed after {max_retries} retries.")
+    return None
+
+# ── LLM helpers ────────────────────────────────────────────────────────────
+def validate_json_response(raw_text, required_fields):
+    """Parse JSON and check for required fields.
+    Returns (dict, None) on success or (None, error_str) on failure."""
+    try:
+        data = json.loads(raw_text)
+    except json.JSONDecodeError as e:
+        return None, f"Invalid JSON: {e} | Raw: {raw_text[:200]}"
+    missing = [f for f in required_fields if f not in data]
+    if missing:
+        return None, f"Missing fields {missing} in: {raw_text[:200]}"
+    return data, None
+
+def llm_call(model, system_prompt, user_content):
+    """Wrapper around ollama.chat that returns (parsed_dict, raw_text) or raises."""
+    response = ollama.chat(
+        model=model,
+        messages=[
+            {"role": "system", "content": system_prompt},
+            {"role": "user",   "content": user_content},
+        ],
+        format="json",
+        options={"temperature": 0.0},
+    )
+    raw = response["message"]["content"]
+    return raw
+
+# ── URL normalization for cross-source dedup ───────────────────────────────
+def normalize_url(url):
+    """Normalize URL for dedup comparison."""
+    parsed = urlparse(url)
+    host = (parsed.hostname or "").removeprefix("www.")
+    path = parsed.path.rstrip("/")
+    return f"{host}{path}".lower()
+
+log.info("Configuration loaded. Ready to run pipeline stages.")
+#+end_src
+
+#+RESULTS:
+: 10:03:07 [INFO] Cache loaded: 0 seen items across all sources (TTL=90d).
+: 10:03:07 [WARNING] Reddit OAuth failed (401 Client Error: Unauthorized for url: https://www.reddit.com/api/v1/access_token) — falling back to public JSON endpoints.
+: 10:03:07 [INFO] Reddit: using unauthenticated public JSON (rate-limited to ~10 req/min).
+: 10:03:07 [INFO]   To upgrade: set REDDIT_CLIENT_ID/SECRET in .env (requires Reddit API app).
+: 10:03:07 [INFO] Configuration loaded. Ready to run pipeline stages.
+
+* 3. Core Editor Updates (Git Savannah)
+
+Fetch commits, apply a noise filter, then triage with a strict LLM schema
+that includes a =confidence= score (1–5). Only commits scoring ≥ 4 make the
+digest — reserving slots for changes that visibly affect daily workflow or
+core infrastructure.
+
+** 3.1 Repository Sync
+
+#+begin_src sh :results output
+cd ~/pkb/resources/emacs/digest/git-mirrors
+if [ ! -d "emacs.git" ]; then
+    git clone --bare git://git.savannah.gnu.org/emacs.git
+    echo "Cloned fresh mirror."
+else
+    echo "Mirror already exists."
+fi
+#+end_src
+
+#+RESULTS:
+: Mirror already exists.
+
+** 3.2 Git Heuristic Sieve & LLM Triage
+
+#+begin_src python
+significant_commits = []
+
+def get_filtered_commits(repo_path, days):
+    subprocess.run(
+        ["git", "-C", repo_path, "fetch", "origin", "+master:master"],
+        capture_output=True, check=True,
+    )
+    git_cmd = [
+        "git", "-C", repo_path, "log",
+        f"--since={days} days ago",
+        "--pretty=format:COMMIT_START%n%h|%an|%cs|%s%n%b",
+        "--no-merges", "master",
+    ]
+    result = subprocess.run(git_cmd, capture_output=True, text=True, check=True)
+    if "COMMIT_START" not in result.stdout:
+        return []
+
+    raw_commits = result.stdout.split("COMMIT_START\n")[1:]
+    ignore_patterns = [
+        r"^Bump version", r"^Fix typo", r"^; ", r"copyright",
+        r"^Merge", r"^Auto-commit", r"^Update.*files",
+        r"^admin", r"^Regenerate", r"^Add.*test", r"^[Tt]ests?:",
+    ]
+    filtered = []
+    for raw in raw_commits:
+        lines = raw.strip().split('\n')
+        if not lines or len(lines[0].split('|')) < 4:
+            continue
+        meta    = lines[0].split('|')
+        subject = meta[3]
+        if any(re.search(p, subject, re.IGNORECASE) for p in ignore_patterns):
+            continue
+        filtered.append({
+            "hash":    meta[0],
+            "author":  meta[1],
+            "date":    meta[2],
+            "subject": subject,
+            "body":    '\n'.join(lines[1:]).strip(),
+        })
+    return filtered
+
+commit_system_prompt = """\
+You are a strict technical evaluator for GNU Emacs development.
+
+Review the commit message below. Classify it by these exact criteria:
+  "Feature"      — a net-new, user-visible capability (not a bug fix or tweak)
+  "Architecture" — a structural change to the C core, runtime, or a major subsystem
+  "Trivial"      — anything else (fixes, tests, docs, minor refactors)
+
+Also assign a confidence score 1–5 for how significant this change is to an
+experienced Emacs user. Reserve 4–5 for changes that visibly affect daily
+workflow or core infrastructure. Score 3 for solid but narrower improvements
+(e.g. mode-specific features, useful fixes). Score 1–2 for trivial or internal.
+
+Respond ONLY with a JSON object matching this exact schema:
+{"is_significant": boolean, "category": "Feature" | "Architecture" | "Trivial", "confidence": integer, "reason": "One sentence."}
+"""
+
+log.info("Starting Git Triage...")
+today_str    = datetime.date.today().isoformat()
+all_commits  = get_filtered_commits(REPO_PATH, DAYS_AGO)
+new_commits  = [c for c in all_commits if c["hash"] not in cache["commits"]]
+log.info(f"  {len(all_commits)} commits after noise filter, {len(new_commits)} not yet seen.")
+
+for i, commit in enumerate(new_commits):
+    try:
+        raw = llm_call(
+            MODEL_TRIAGE,
+            commit_system_prompt,
+            f"Subject: {commit['subject']}\nBody:\n{commit['body']}",
+        )
+        result, err = validate_json_response(raw, ["is_significant", "category", "confidence", "reason"])
+        if err:
+            log.warning(f"  Validation failed for {commit['hash']}: {err}")
+            continue
+        cache["commits"][commit["hash"]] = today_str
+        if result["is_significant"] and int(result.get("confidence", 0)) >= 4:
+            commit["llm_eval"] = result
+            significant_commits.append(commit)
+    except Exception as e:
+        log.error(f"  LLM call failed for {commit['hash']}: {e}")
+    # Incremental cache save every 25 commits
+    if (i + 1) % 25 == 0:
+        save_cache(cache)
+        log.debug(f"  Cache checkpoint at commit {i+1}/{len(new_commits)}")
+
+save_cache(cache)
+log.info(f"Git Triage Complete: {len(significant_commits)} high-confidence commits (>= 4/5).")
+#+end_src
+
+#+RESULTS:
+: 10:03:17 [INFO] Starting Git Triage...
+: 10:03:18 [INFO]   229 commits after noise filter, 229 not yet seen.
+: 10:03:35 [WARNING]   Validation failed for b36a26bb3b8: Missing fields ['is_significant', 'category', 'confidence', 'reason'] in: { "type": "merge", "branch": "main" }
+: 10:09:29 [INFO] Git Triage Complete: 9 high-confidence commits (>= 4/5).
+
+* 4. Community Updates (Reddit)
+
+Uses OAuth if credentials are configured, otherwise falls back to public JSON
+endpoints. The general instruct model produces richer prose summaries.
+
+#+begin_src python
+significant_posts = []
+
+def fetch_reddit_emacs(limit=40):
+    data = reddit_get("/r/emacs/top", params={"t": "month", "limit": limit})
+    if data and "data" in data:
+        return data["data"]["children"]
+    log.warning("Failed to fetch r/emacs top posts.")
+    return []
+
+def fetch_top_comments(permalink, limit=5):
+    # permalink looks like /r/emacs/comments/.../
+    data = reddit_get(f"{permalink}.json")
+    if not data or not isinstance(data, list) or len(data) < 2:
+        return []
+    children = data[1]["data"]["children"]
+    return [c["data"].get("body", "") for c in children[:limit] if c["kind"] == "t1"]
+
+def extract_quote_candidates(selftext, comments, min_len=50, max_len=220):
+    raw = selftext + "\n" + "\n".join(comments)
+    candidates = []
+    for line in re.split(r'(?<=[.!?])\s+|\n', raw):
+        line = line.strip().strip('"\'')
+        if min_len <= len(line) <= max_len and not re.match(r'^(https?://|>|#|\*|\d+\.)', line):
+            candidates.append(line)
+    return candidates[:8]
+
+reddit_system_prompt = """\
+You are a technical curator for a GNU Emacs digest.
+
+Review the post below. Is it announcing a new package, sharing a high-quality
+blog post, demonstrating a genuinely novel workflow, OR an insightful community discussion?
+Beginner setup help, easily searched questions, and generic reposts are NOT significant.
+
+QUOTE_CANDIDATES is a numbered list of sentences extracted verbatim from the
+post and its top comments. If one is insightful or representative of the
+post's value, return its 0-based index as `quote_index`. If none are suitable,
+return -1. Do NOT invent or rephrase — only select an index.
+
+For significant posts, write a thorough `summary` (4-6 sentences) covering:
+  - What the package/workflow/post/discussion actually does or demonstrates
+  - The technical approach or implementation details, if visible
+  - Any notable limitations, caveats, or open questions raised
+  - The community reaction and what it reveals about unmet needs
+
+Also write a short `why_it_matters` (1 sentence) for an experienced Emacs user
+who wants to know if this is worth their time.
+
+Respond ONLY with this JSON schema:
+{
+  "is_significant": boolean,
+  "category": "Package" | "Blog" | "Workflow" | "Discussion" | "Trivial",
+  "summary": "4-6 sentence technical summary.",
+  "why_it_matters": "One sentence for an experienced user.",
+  "quote_index": integer
+}
+"""
+
+log.info("Starting Reddit Deep Triage...")
+raw_posts       = fetch_reddit_emacs(40)
+ignore_patterns = [r"^how (do|can|to)\b", r"^is there\b", r"^what (is|are)\b"]
+today_str       = datetime.date.today().isoformat()
+
+if raw_posts:
+
+    for i, post in enumerate(raw_posts):
+        data      = post["data"]
+        url       = data.get("url", "")
+        title     = data.get("title", "")
+        permalink = data.get("permalink", "")
+        selftext  = data.get("selftext", "")
+        score     = data.get("score", 0)
+        n_comments= data.get("num_comments", 0)
+        op        = data.get("author", "unknown")
+
+        timestamp = data.get("created_utc", 0)
+        post_date = datetime.datetime.fromtimestamp(timestamp).strftime("%Y-%m-%d")
+
+        if url in cache["posts"]:
+            continue
+        if any(re.search(p, title, re.IGNORECASE) for p in ignore_patterns):
+            continue
+
+        comments   = fetch_top_comments(permalink)
+        time.sleep(0.3 if _reddit_use_oauth else 1.0)
+        candidates = extract_quote_candidates(selftext, comments)
+
+        candidate_block = "\n".join(f"[{j}] {q}" for j, q in enumerate(candidates))
+        content_payload = (
+            f"Title: {title}\nURL: {url}\n\n"
+            f"Post Body:\n{selftext[:1200]}\n\n"
+            f"Top Comments:\n" + "\n".join(f"- {c[:400]}" for c in comments) + "\n\n"
+            f"QUOTE_CANDIDATES:\n{candidate_block}"
+        )
+
+        try:
+            raw = llm_call(MODEL_SUMMARY, reddit_system_prompt, content_payload)
+            result, err = validate_json_response(
+                raw, ["is_significant", "category", "summary", "why_it_matters", "quote_index"]
+            )
+            if err:
+                log.warning(f"  Validation failed for '{title[:50]}': {err}")
+                cache["posts"][url] = today_str
+                continue
+            cache["posts"][url] = today_str
+            if result["is_significant"]:
+                qi    = result.get("quote_index", -1)
+                quote = candidates[qi] if (isinstance(qi, int) and 0 <= qi < len(candidates)) else ""
+                significant_posts.append({
+                    "title":          title,
+                    "url":            url,
+                    "op":             op,
+                    "date":           post_date,
+                    "score":          score,
+                    "num_comments":   n_comments,
+                    "category":       result.get("category", "Misc"),
+                    "summary":        result.get("summary", ""),
+                    "why_it_matters": result.get("why_it_matters", ""),
+                    "quote":          quote,
+                })
+        except Exception as e:
+            log.error(f"  LLM call failed for '{title[:50]}': {e}")
+
+        # Incremental cache save every 10 posts
+        if (i + 1) % 10 == 0:
+            save_cache(cache)
+            log.debug(f"  Cache checkpoint at post {i+1}/{len(raw_posts)}")
+
+save_cache(cache)
+log.info(f"Reddit Triage Complete: {len(significant_posts)} notable posts.")
+#+end_src
+
+#+RESULTS:
+: 10:09:51 [INFO] Starting Reddit Deep Triage...
+: 10:13:32 [INFO] Reddit Triage Complete: 28 notable posts.
+
+* 5. Blog Aggregation (Planet Emacslife)
+
+Planet Emacslife aggregates the canonical Emacs blogosphere via Atom. Now with
+date filtering and an upgraded prompt matching the richness of Reddit summaries.
+
+#+begin_src python
+blog_posts  = []
+PLANET_URL  = "https://planet.emacslife.com/atom.xml"
+
+blog_system_prompt = """\
+You are a technical curator for a GNU Emacs digest.
+
+Review the blog post title and excerpt below. Is it a substantive technical
+post about Emacs — covering a package, configuration technique, or novel
+workflow? Skip opinion pieces, bare announcements, and posts whose primary
+topic is not Emacs.
+
+For significant posts, write a thorough `summary` (3-5 sentences) covering:
+  - What the post actually demonstrates or teaches
+  - The technical approach or key takeaway
+  - Any notable limitations or caveats
+
+Also write a short `why_it_matters` (1 sentence) for an experienced Emacs user
+who wants to know if this is worth their time.
+
+Respond ONLY with this JSON schema:
+{"is_significant": boolean, "summary": "3-5 sentence technical summary.", "why_it_matters": "One sentence."}
+"""
+
+log.info("Fetching Planet Emacslife...")
+feed        = feedparser.parse(PLANET_URL)
+cutoff_dt   = datetime.datetime.now() - datetime.timedelta(days=DAYS_AGO)
+today_str   = datetime.date.today().isoformat()
+
+new_entries = [e for e in feed.entries if e.get("link", "") not in cache["blogs"]]
+log.info(f"  {len(feed.entries)} entries total, {len(new_entries)} not yet seen.")
+
+for i, entry in enumerate(new_entries):
+    link    = entry.get("link", "")
+    title   = entry.get("title", "")
+    excerpt = entry.get("summary", "")[:800]
+
+    date_parsed = entry.get("published_parsed", entry.get("updated_parsed"))
+    if date_parsed:
+        entry_dt  = datetime.datetime.fromtimestamp(mktime(date_parsed))
+        post_date = entry_dt.strftime("%Y-%m-%d")
+        if entry_dt < cutoff_dt:
+            cache["blogs"][link] = today_str
+            log.debug(f"  Skipping old entry: {title[:50]} ({post_date})")
+            continue
+    else:
+        post_date = "Unknown Date"
+
+    try:
+        raw = llm_call(MODEL_SUMMARY, blog_system_prompt, f"Title: {title}\n\nExcerpt:\n{excerpt}")
+        result, err = validate_json_response(raw, ["is_significant", "summary"])
+        cache["blogs"][link] = today_str
+        if err:
+            log.warning(f"  Validation failed for '{title[:50]}': {err}")
+            continue
+        if result["is_significant"]:
+            blog_posts.append({
+                "title":          title,
+                "url":            link,
+                "date":           post_date,
+                "summary":        result.get("summary", ""),
+                "why_it_matters": result.get("why_it_matters", ""),
+                "author":         entry.get("author", "Unknown"),
+            })
+    except Exception as e:
+        log.error(f"  LLM call failed for '{title[:50]}': {e}")
+
+    if (i + 1) % 15 == 0:
+        save_cache(cache)
+        log.debug(f"  Cache checkpoint at blog {i+1}/{len(new_entries)}")
+
+save_cache(cache)
+log.info(f"Planet Triage Complete: {len(blog_posts)} notable posts.")
+#+end_src
+
+#+RESULTS:
+: 10:14:15 [INFO] Fetching Planet Emacslife...
+: 10:14:16 [INFO]   58 entries total, 58 not yet seen.
+: 10:15:46 [INFO] Planet Triage Complete: 19 notable posts.
+
+* 6. Sacha Chua's Weekly Emacs News
+
+The single most comprehensive weekly aggregation of Emacs content — captures
+items from Mastodon, IRC, mailing lists, and blogs that no other source covers.
+Items already seen in Reddit or Planet are filtered out during compilation (§9).
+
+#+begin_src python
+sacha_items = []
+SACHA_FEED  = "https://sachachua.com/blog/category/emacs-news/feed/"
+
+log.info("Fetching Sacha Chua's Weekly Emacs News...")
+sacha_feed = feedparser.parse(SACHA_FEED)
+cutoff_dt  = datetime.datetime.now() - datetime.timedelta(days=DAYS_AGO)
+today_str  = datetime.date.today().isoformat()
+
+new_weeklies = [e for e in sacha_feed.entries
+                if e.get("link", "") not in cache["sacha"]]
+log.info(f"  {len(sacha_feed.entries)} weekly posts in feed, {len(new_weeklies)} not yet processed.")
+
+def extract_links_from_html(html):
+    """Extract (url, title, description) from <a> tags in Sacha's weekly HTML.
+    Aggressively filters noise: bare URLs as titles, meetup/event links,
+    social handles, and entries with no meaningful description."""
+    links = []
+    pattern = r'<a[^>]+href="([^"]+)"[^>]*>([^<]+)</a>([^<]*)'
+
+    # Domains/paths that are navigation, social, or event noise
+    skip_url_patterns = [
+        'sachachua.com', 'twitter.com', 'x.com', 'youtube.com/channel',
+        'meetup.com', 'emacslife.com/calendar', '.ics',
+    ]
+    # Titles that are just social handles, bare labels, or site names
+    skip_title_patterns = [
+        r'^https?://',            # title is a raw URL
+        r'^@\S+',                 # Mastodon/Bluesky handle
+        r'^Reddit$',              # bare "Reddit" back-link
+        r'^Protesilaos$',         # bare author name as link text
+        r'^Irreal$',
+        r'^Hacker News$',
+    ]
+
+    for m in re.finditer(pattern, html):
+        url   = m.group(1)
+        title = unescape(m.group(2).strip())
+        desc  = unescape(m.group(3).strip().strip('-–—:;,').strip())
+
+        # Hard filters on URL and title length
+        if len(title) < 8:
+            continue
+        if any(s in url for s in skip_url_patterns):
+            continue
+        if any(re.match(p, title) for p in skip_title_patterns):
+            continue
+        # Skip Mastodon/Bluesky/fediverse profile links
+        if any(s in url for s in ['fosstodon.org', 'social.', 'bsky.app',
+                                   'mastodon.', 'mathstodon.', 'fediscience.']):
+            continue
+        # Require a meaningful description (>10 chars) or a clearly descriptive title (>30 chars)
+        if len(desc) < 10 and len(title) < 30:
+            continue
+
+        links.append({"url": url, "title": title, "description": desc})
+    return links
+
+for weekly in new_weeklies:
+    weekly_link = weekly.get("link", "")
+    date_parsed = weekly.get("published_parsed", weekly.get("updated_parsed"))
+    if date_parsed:
+        weekly_dt = datetime.datetime.fromtimestamp(mktime(date_parsed))
+        if weekly_dt < cutoff_dt:
+            cache["sacha"][weekly_link] = today_str
+            continue
+        weekly_date = weekly_dt.strftime("%Y-%m-%d")
+    else:
+        weekly_date = "Unknown Date"
+
+    # Extract HTML content from the feed entry
+    content_html = ""
+    if weekly.get("content"):
+        content_html = weekly["content"][0].get("value", "")
+    elif weekly.get("summary"):
+        content_html = weekly["summary"]
+
+    links = extract_links_from_html(content_html)
+    log.info(f"  {weekly_date}: extracted {len(links)} links from '{weekly.get('title', '')[:60]}'")
+
+    for link_item in links:
+        sacha_items.append({
+            "title":       link_item["title"],
+            "url":         link_item["url"],
+            "description": link_item["description"],
+            "weekly_date": weekly_date,
+            "source_post": weekly_link,
+        })
+
+    cache["sacha"][weekly_link] = today_str
+
+save_cache(cache)
+log.info(f"Sacha Chua Complete: {len(sacha_items)} items extracted across {len(new_weeklies)} weekly posts.")
+#+end_src
+
+#+RESULTS:
+: 10:16:27 [INFO] Fetching Sacha Chua's Weekly Emacs News...
+: 10:16:27 [INFO]   7 weekly posts in feed, 7 not yet processed.
+: 10:16:27 [INFO]   2026-05-04: extracted 73 links from '2026-05-04 Emacs news'
+: 10:16:27 [INFO]   2026-04-27: extracted 65 links from '2026-04-27 Emacs news'
+: 10:16:27 [INFO]   2026-04-20: extracted 85 links from '2026-04-20 Emacs news'
+: 10:16:27 [INFO]   2026-04-13: extracted 67 links from '2026-04-13 Emacs news'
+: 10:16:27 [INFO]   2026-04-06: extracted 68 links from '2026-04-06 Emacs news'
+: 10:16:27 [INFO] Sacha Chua Complete: 358 items extracted across 7 weekly posts.
+
+* 7. Package Ecosystem (MELPA & Major Releases)
+
+Track new packages added to MELPA and releases of major ecosystem packages.
+
+#+begin_src python
+new_melpa_packages = []
+package_releases   = []
+
+MELPA_RECIPES_FEED = "https://github.com/melpa/melpa/commits/master/recipes.atom"
+
+TRACKED_PACKAGES = {
+    "magit":      "https://github.com/magit/magit/releases.atom",
+    "transient":  "https://github.com/magit/transient/releases.atom",
+    "org-mode":   "https://github.com/bzg/org-mode/releases.atom",
+    "consult":    "https://github.com/minad/consult/releases.atom",
+    "vertico":    "https://github.com/minad/vertico/releases.atom",
+    "corfu":      "https://github.com/minad/corfu/releases.atom",
+    "embark":     "https://github.com/oantolin/embark/releases.atom",
+    "orderless":  "https://github.com/oantolin/orderless/releases.atom",
+    "marginalia": "https://github.com/minad/marginalia/releases.atom",
+    "denote":     "https://github.com/protesilaos/denote/releases.atom",
+    "elfeed":     "https://github.com/skeeto/elfeed/releases.atom",
+}
+
+# ── MELPA new packages ─────────────────────────────────────────────────────
+log.info("Fetching MELPA new recipes...")
+today_str  = datetime.date.today().isoformat()
+cutoff_dt  = datetime.datetime.now() - datetime.timedelta(days=DAYS_AGO)
+
+try:
+    melpa_feed = feedparser.parse(MELPA_RECIPES_FEED)
+    for entry in melpa_feed.entries:
+        entry_id = entry.get("id", entry.get("link", ""))
+        if entry_id in cache["melpa"]:
+            continue
+
+        title = entry.get("title", "")
+        # Only track commits that add new recipes
+        if not re.match(r"^Add\s+\S+", title, re.IGNORECASE):
+            cache["melpa"][entry_id] = today_str
+            continue
+
+        date_parsed = entry.get("published_parsed", entry.get("updated_parsed"))
+        if date_parsed:
+            entry_dt = datetime.datetime.fromtimestamp(mktime(date_parsed))
+            if entry_dt < cutoff_dt:
+                cache["melpa"][entry_id] = today_str
+                continue
+            entry_date = entry_dt.strftime("%Y-%m-%d")
+        else:
+            entry_date = "Unknown Date"
+
+        # Extract package name from "Add <package-name>" commit message
+        pkg_match = re.match(r"^Add\s+(\S+)", title, re.IGNORECASE)
+        pkg_name  = pkg_match.group(1) if pkg_match else title
+
+        new_melpa_packages.append({
+            "name":   pkg_name,
+            "date":   entry_date,
+            "url":    f"https://melpa.org/#/{pkg_name}",
+            "commit": entry.get("link", ""),
+        })
+        cache["melpa"][entry_id] = today_str
+
+    log.info(f"  MELPA: {len(new_melpa_packages)} new packages.")
+except Exception as e:
+    log.error(f"  MELPA feed fetch failed: {e}")
+
+# ── Tracked package releases ──────────────────────────────────────────────
+log.info("Checking tracked package releases...")
+for pkg_name, feed_url in TRACKED_PACKAGES.items():
+    try:
+        pkg_feed = feedparser.parse(feed_url)
+        for entry in pkg_feed.entries[:3]:  # only check latest 3 releases
+            entry_id = entry.get("id", entry.get("link", ""))
+            if entry_id in cache["releases"]:
+                continue
+
+            date_parsed = entry.get("published_parsed", entry.get("updated_parsed"))
+            if date_parsed:
+                entry_dt = datetime.datetime.fromtimestamp(mktime(date_parsed))
+                if entry_dt < cutoff_dt:
+                    cache["releases"][entry_id] = today_str
+                    continue
+                entry_date = entry_dt.strftime("%Y-%m-%d")
+            else:
+                entry_date = "Unknown Date"
+
+            release_title = entry.get("title", "Unknown Release")
+            content       = entry.get("summary", "")[:500]
+
+            package_releases.append({
+                "package": pkg_name,
+                "version": release_title,
+                "date":    entry_date,
+                "url":     entry.get("link", ""),
+                "notes":   content,
+            })
+            cache["releases"][entry_id] = today_str
+            log.info(f"  {pkg_name}: {release_title} ({entry_date})")
+    except Exception as e:
+        log.warning(f"  {pkg_name} release feed failed: {e}")
+
+save_cache(cache)
+log.info(f"Package Ecosystem Complete: {len(new_melpa_packages)} new MELPA packages, "
+         f"{len(package_releases)} tracked releases.")
+#+end_src
+
+#+RESULTS:
+#+begin_example
+10:16:40 [INFO] Fetching MELPA new recipes...
+10:16:41 [INFO]   MELPA: 9 new packages.
+10:16:41 [INFO] Checking tracked package releases...
+10:16:42 [INFO]   transient: v0.13.2 (2026-05-01)
+10:16:42 [INFO]   transient: v0.13.1 (2026-05-01)
+10:16:42 [INFO]   transient: v0.13.0 (2026-04-22)
+10:16:42 [INFO]   org-mode: release_9.8.4 (2026-05-02)
+10:16:42 [INFO]   org-mode: release_9.8.3 (2026-04-18)
+10:16:42 [INFO]   org-mode: release_9.8.2 (2026-04-11)
+10:16:46 [INFO] Package Ecosystem Complete: 9 new MELPA packages, 6 tracked releases.
+#+end_example
+
+* 8. Mailing List (emacs-devel)
+
+Uses the public-inbox Atom feeds with a fallback mirror. LLM triage filters
+for substantive proposals and discussions.
+
+#+begin_src python
+ml_threads = []
+
+EMACS_DEVEL_FEEDS = [
+    "https://yhetil.org/emacs-devel/new.atom",
+    "https://lore.kernel.org/emacs-devel/new.atom",
+]
+
+ml_system_prompt = """\
+You are a technical curator for a GNU Emacs digest focused on the emacs-devel
+mailing list.
+
+Review the thread subject below. Classify it:
+  "Proposal"    — a formal proposal for a new feature or significant change
+  "Discussion"  — a substantive technical discussion about Emacs internals or direction
+  "Release"     — release announcements, freeze notices, branching
+  "Trivial"     — bug reports, patches without broader context, routine maintenance
+
+Respond ONLY with this JSON schema:
+{"is_significant": boolean, "category": "Proposal" | "Discussion" | "Release" | "Trivial", "summary": "1-2 sentence summary."}
+"""
+
+def get_mailing_list_threads(days=30):
+    cutoff_dt     = datetime.datetime.now() - datetime.timedelta(days=days)
+    feed          = None
+    today_str     = datetime.date.today().isoformat()
+
+    for feed_url in EMACS_DEVEL_FEEDS:
+        try:
+            parsed = feedparser.parse(feed_url)
+            if parsed.entries:
+                feed = parsed
+                log.info(f"  emacs-devel feed loaded from {feed_url}: {len(feed.entries)} entries.")
+                break
+        except Exception as e:
+            log.warning(f"  Feed {feed_url} failed: {e}")
+
+    if not feed or not feed.entries:
+        log.error("All emacs-devel feeds failed.")
+        return []
+
+    ignore_prefixes = ["bug#", "patch#", "[gnu.org #"]
+    seen_subjects   = set()
+    candidates      = []
+
+    for entry in feed.entries:
+        mid         = entry.get("id", entry.get("link", ""))
+        raw_subject = entry.get("title", "")
+        clean_subject = re.sub(
+            r'^(Re:\s*|\[PATCH[^\]]*\]\s*)+', '', raw_subject, flags=re.IGNORECASE
+        ).strip()
+
+        if mid in cache["threads"]:
+            continue
+        if any(clean_subject.lower().startswith(p) for p in ignore_prefixes):
+            cache["threads"][mid] = today_str
+            continue
+        if clean_subject in seen_subjects:
+            cache["threads"][mid] = today_str
+            continue
+
+        date_parsed = entry.get("published_parsed", entry.get("updated_parsed"))
+        if date_parsed:
+            entry_dt = datetime.datetime.fromtimestamp(mktime(date_parsed))
+            if entry_dt < cutoff_dt:
+                cache["threads"][mid] = today_str
+                continue
+
+        seen_subjects.add(clean_subject)
+        author = entry.get("author", "unknown")
+
+        candidates.append({
+            "mid":     mid,
+            "author":  author,
+            "subject": clean_subject,
+            "url":     entry.get("link", ""),
+        })
+
+    return candidates
+
+log.info("Starting Mailing List Triage...")
+ml_candidates = get_mailing_list_threads(DAYS_AGO)
+log.info(f"  {len(ml_candidates)} candidate threads to triage.")
+today_str = datetime.date.today().isoformat()
+
+for i, thread in enumerate(ml_candidates):
+    try:
+        raw = llm_call(
+            MODEL_TRIAGE,
+            ml_system_prompt,
+            f"Subject: {thread['subject']}",
+        )
+        result, err = validate_json_response(raw, ["is_significant", "category", "summary"])
+        cache["threads"][thread["mid"]] = today_str
+        if err:
+            log.warning(f"  Validation failed for '{thread['subject'][:50]}': {err}")
+            continue
+        if result["is_significant"]:
+            thread["llm_eval"] = result
+            ml_threads.append(thread)
+    except Exception as e:
+        log.error(f"  LLM call failed for '{thread['subject'][:50]}': {e}")
+
+    if (i + 1) % 15 == 0:
+        save_cache(cache)
+
+save_cache(cache)
+log.info(f"Mailing List Triage Complete: {len(ml_threads)} notable threads.")
+#+end_src
+
+#+RESULTS:
+: 10:16:58 [INFO] Starting Mailing List Triage...
+: 10:16:59 [INFO]   emacs-devel feed loaded from https://yhetil.org/emacs-devel/new.atom: 25 entries.
+: 10:16:59 [INFO]   11 candidate threads to triage.
+: 10:17:22 [INFO] Mailing List Triage Complete: 2 notable threads.
+
+* 9. Cross-Source Deduplication & Digest Compilation
+
+Merges all sources, removes items appearing in multiple feeds (keeping the
+richest version), and writes a versioned Org file.
+
+#+begin_src python :results output
+def deduplicate_sources(posts, blogs, sacha):
+    """Remove items appearing in multiple sources, keeping the richest version.
+    Priority: Reddit > Planet > Sacha (Reddit has quotes, scores, community voice)."""
+    seen = set()
+
+    # Reddit posts — highest priority, keep all
+    deduped_posts = []
+    for p in posts:
+        key = normalize_url(p["url"])
+        seen.add(key)
+        deduped_posts.append(p)
+
+    # Planet blogs — drop if URL already covered by Reddit
+    deduped_blogs = []
+    for b in blogs:
+        key = normalize_url(b["url"])
+        if key not in seen:
+            seen.add(key)
+            deduped_blogs.append(b)
+        else:
+            log.debug(f"  Dedup: blog '{b['title'][:50]}' already in Reddit")
+
+    # Sacha items — drop if URL already covered
+    deduped_sacha = []
+    for s in sacha:
+        key = normalize_url(s["url"])
+        if key not in seen:
+            seen.add(key)
+            deduped_sacha.append(s)
+
+    return deduped_posts, deduped_blogs, deduped_sacha
+
+
+def generate_master_digest(commits, posts, blogs, sacha, melpa, releases, threads):
+    out  = "#+TITLE: Sovereign Digest: Emacs Edition\n"
+    out += f"#+DATE: {time.strftime('%Y-%m-%d')}\n\n"
+
+    # ── Core commits ──────────────────────────────────────────────────────
+    out += "* Core Editor Updates (Git)\n\n"
+    if not commits:
+        out += "No high-confidence commits this period.\n\n"
+    for c in commits:
+        ev  = c["llm_eval"]
+        out += f"** {ev.get('category', 'Misc')}: {c['subject']}\n"
+        out += (f":PROPERTIES:\n:COMMIT: {c['hash']}\n:DATE: {c.get('date', 'Unknown')}\n"
+                f":CONFIDENCE: {ev.get('confidence')}/5\n:END:\n")
+        out += f"- *Author:* {c['author']}\n"
+        out += f"- *Note:* {ev.get('reason', '')}\n\n"
+
+    # ── Reddit ────────────────────────────────────────────────────────────
+    out += "* Community Pulse (Reddit)\n\n"
+    if not posts:
+        out += "No notable posts this period.\n\n"
+    for p in posts:
+        out += f"** {p['category']}: {p['title']}\n"
+        out += (f":PROPERTIES:\n:OP: u/{p['op']}\n:DATE: {p.get('date', 'Unknown')}\n"
+                f":SCORE: {p['score']} ↑\n:COMMENTS: {p['num_comments']}\n:END:\n")
+        out += f"- *Link:* {p['url']}\n"
+        if p.get("why_it_matters"):
+            out += f"- *Why it matters:* {p['why_it_matters']}\n"
+        out += f"- *Summary:* {p['summary']}\n"
+        if p.get("quote"):
+            out += f"- *Community voice:* \u201c{p['quote']}\u201d\n"
+        out += "\n"
+
+    # ── Planet Emacslife ──────────────────────────────────────────────────
+    if blogs:
+        out += "* Blogosphere (Planet Emacslife)\n\n"
+        for b in blogs:
+            out += f"** {b['title']}\n"
+            out += f":PROPERTIES:\n:DATE: {b.get('date', 'Unknown')}\n:END:\n"
+            out += f"- *Author:* {b['author']}\n"
+            out += f"- *Link:* {b['url']}\n"
+            if b.get("why_it_matters"):
+                out += f"- *Why it matters:* {b['why_it_matters']}\n"
+            out += f"- *Summary:* {b['summary']}\n\n"
+
+    # ── Sacha Chua's picks ────────────────────────────────────────────────
+    if sacha:
+        out += "* From Sacha Chua's Weekly Emacs News\n\n"
+        out += "Items not covered by the sources above, curated from\n"
+        out += "[[https://sachachua.com/blog/category/emacs-news/][Sacha Chua's Weekly Emacs News]].\n\n"
+        for s in sacha:
+            out += f"** {s['title']}\n"
+            out += f"- *Link:* {s['url']}\n"
+            if s.get("description"):
+                out += f"- {s['description']}\n"
+            out += "\n"
+
+    # ── Package Ecosystem ─────────────────────────────────────────────────
+    if melpa or releases:
+        out += "* Package Ecosystem\n\n"
+        if releases:
+            out += "** Tracked Package Releases\n\n"
+            for r in releases:
+                out += f"*** {r['package']}: {r['version']}\n"
+                out += f":PROPERTIES:\n:DATE: {r.get('date', 'Unknown')}\n:END:\n"
+                out += f"- *Link:* {r['url']}\n\n"
+        if melpa:
+            out += "** New on MELPA\n\n"
+            for m in melpa:
+                out += f"*** {m['name']}\n"
+                out += f":PROPERTIES:\n:DATE: {m.get('date', 'Unknown')}\n:END:\n"
+                out += f"- *MELPA:* {m['url']}\n\n"
+
+    # ── emacs-devel ───────────────────────────────────────────────────────
+    if threads:
+        out += "* Upstream Discussions (emacs-devel)\n\n"
+        for t in threads:
+            ev = t.get("llm_eval", {})
+            out += f"** {ev.get('category', 'Discussion')}: {t['subject']}\n"
+            out += f"- *Author:* {t['author']}\n"
+            out += f"- *Link:* {t['url']}\n"
+            if ev.get("summary"):
+                out += f"- *Summary:* {ev['summary']}\n"
+            out += "\n"
+
+    return out
+
+
+# ── Deduplicate ───────────────────────────────────────────────────────────
+log.info("Deduplicating across sources...")
+orig_blogs = len(blog_posts)
+orig_sacha = len(sacha_items)
+
+deduped_posts, deduped_blogs, deduped_sacha = deduplicate_sources(
+    significant_posts, blog_posts, sacha_items
+)
+
+log.info(f"  Blogs: {orig_blogs} → {len(deduped_blogs)} after dedup")
+log.info(f"  Sacha: {orig_sacha} → {len(deduped_sacha)} after dedup")
+
+# ── Generate & write ──────────────────────────────────────────────────────
+master_text = generate_master_digest(
+    significant_commits, deduped_posts, deduped_blogs, deduped_sacha,
+    new_melpa_packages, package_releases, ml_threads,
+)
+
+date_str    = time.strftime("%Y-%m-%d")
+dated_path  = os.path.join(OUTPUT_DIR, f"digest-{date_str}.org")
+latest_path = os.path.join(OUTPUT_DIR, "latest-digest.org")
+
+with open(dated_path, "w") as f:
+    f.write(master_text)
+
+# Copy to latest-digest.org (copy rather than symlink for WSL/Windows compat)
+shutil.copy2(dated_path, latest_path)
+
+log.info(f"Digest written to {dated_path}")
+log.info(f"  Also copied to {latest_path}")
+log.info(f"  Commits: {len(significant_commits)}, Reddit: {len(deduped_posts)}, "
+         f"Blogs: {len(deduped_blogs)}, Sacha: {len(deduped_sacha)}, "
+         f"MELPA: {len(new_melpa_packages)}, Releases: {len(package_releases)}, "
+         f"ML threads: {len(ml_threads)}")
+print(f"Digest compiled: {dated_path}")
+#+end_src
+
+#+RESULTS:
+: 10:17:45 [INFO] Deduplicating across sources...
+: 10:17:45 [INFO]   Blogs: 19 → 18 after dedup
+: 10:17:45 [INFO]   Sacha: 358 → 224 after dedup
+: 10:17:45 [INFO] Digest written to /home/calebc42/pkb/resources/emacs/digest/digest-2026-05-06.org
+: 10:17:45 [INFO]   Also copied to /home/calebc42/pkb/resources/emacs/digest/latest-digest.org
+: 10:17:45 [INFO]   Commits: 9, Reddit: 28, Blogs: 18, Sacha: 224, MELPA: 9, Releases: 6, ML threads: 2
+: Digest compiled: /home/calebc42/pkb/resources/emacs/digest/digest-2026-05-06.org
+
+* 10. Fortnightly Tips & Tricks to Fortune
+
+Extracts high-value comments from the official tips/tricks threads and formats them
+as a =.fortune= file separated by =%=.
+
+#+begin_src python
+def fetch_tips_and_tricks():
+    data = reddit_get("/r/emacs/search", params={
+        "q":           'title:"Fortnightly tips, tricks, & snippets"',
+        "restrict_sr": "on",
+        "sort":        "new",
+        "limit":       "2",
+    })
+    if not data or "data" not in data:
+        log.warning("Tips & Tricks search failed.")
+        return []
+
+    children = data["data"]["children"]
+    if not children:
+        return []
+
+    # Use the permalink of the most recent tips thread
+    latest_thread = children[0]["data"]["permalink"]
+
+    # Reuse the fetch_top_comments function from Section 4
+    return fetch_top_comments(latest_thread, limit=20)
+
+log.info("Fetching Tips and Tricks...")
+tips = fetch_tips_and_tricks()
+fortune_path = os.path.join(OUTPUT_DIR, "tips_and_tricks.fortune")
+
+if tips:
+    # Load existing tips to avoid duplicates
+    existing_tips = set()
+    if os.path.exists(fortune_path):
+        with open(fortune_path, "r") as f:
+            for block in f.read().split("\n%\n"):
+                existing_tips.add(block.strip())
+
+    with open(fortune_path, "a") as f:
+        added = 0
+        for tip in tips:
+            tip_text = tip.strip()
+            if len(tip_text) > 50 and tip_text not in existing_tips:
+                f.write(tip_text + "\n%\n")
+                added += 1
+    log.info(f"Appended {added} new tips to {fortune_path}")
+    if added:
+        log.info(f"Run 'strfile {fortune_path}' to compile for the fortune utility.")
+else:
+    log.info("No new tips found.")
+#+end_src

@@ -1,0 +1,22 @@
+\# Credentials
+.env
+
+# Bare git mirror (~500MB+)
+git-mirrors/
+
+# Runtime state
+seen_ids.json
+digest.log
+
+# Emacs lock/backup files
+\#*\#
+.\#*
+*~
+
+# Generated digests (keep the pipeline, not the output)
+latest-digest.org
+tips_and_tricks.fortune
+
+# Python
+__pycache__/
+*.pyc

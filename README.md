@@ -4,12 +4,14 @@ A local-first, LLM-powered digest generator that aggregates a month of Emacs new
 
 ## What It Does
 
-Sovereign Digest pulls from **seven sources**, triages each item with a local LLM, deduplicates across sources, and compiles a richly annotated Org-mode digest:
+Sovereign Digest pulls from **nine sources**, triages each item with a local LLM, deduplicates across sources, and compiles a richly annotated Org-mode digest:
 
 | Source | What's Captured |
 |--------|----------------|
 | **Git Savannah** | High-confidence commits to GNU Emacs (≥ 4/5 significance) |
 | **r/emacs** | Top posts with 4-6 sentence summaries, community quotes, and engagement data |
+| **Hacker News** | Emacs stories via the Algolia search API (no auth needed) |
+| **Lobste.rs** | Curated posts from the invite-only community's `emacs` tag |
 | **Planet Emacslife** | Curated blog posts from the Emacs blogosphere |
 | **Sacha Chua's Weekly** | Gap-filling items from the most comprehensive Emacs news aggregation |
 | **MELPA** | New packages added to the archive |
@@ -87,40 +89,40 @@ emacs digest-pipeline.org
 
 In Emacs, execute blocks in order with `C-c C-c`:
 1. **§2 Configuration** — always run first (initializes session state)
-2. **§3–§8** — source collection (can be run individually or in sequence)
-3. **§9 Compilation** — deduplicates and writes the digest
+2. **§3–§10** — source collection (can be run individually or in sequence)
+3. **§11 Compilation** — deduplicates and writes the digest
 
 ## Pipeline Architecture
 
 ```
-┌─────────────┐  ┌─────────────┐  ┌─────────────┐
-│  Git        │  │  Reddit     │  │  Planet     │
-│  Savannah   │  │  (OAuth or  │  │  Emacslife  │
-│             │  │   public)   │  │             │
-└──────┬──────┘  └──────┬──────┘  └──────┬──────┘
-       │                │                │
-       │    MODEL_TRIAGE│   MODEL_SUMMARY│   MODEL_SUMMARY
-       │    (coder 14B) │   (general 14B)│   (general 14B)
-       │                │                │
-       ▼                ▼                ▼
-┌──────────────────────────────────────────────────┐
-│              seen_ids.json (TTL: 90d)            │
-└──────────────────────────────────────────────────┘
-       │                │                │
-┌──────┴──────┐  ┌──────┴──────┐  ┌──────┴──────┐
-│  Sacha Chua │  │   MELPA +   │  │ emacs-devel │
-│  Weekly     │  │  Releases   │  │ (Atom feed) │
-└──────┬──────┘  └──────┬──────┘  └──────┬──────┘
-       │                │                │
-       ▼                ▼                ▼
-┌──────────────────────────────────────────────────┐
-│         Cross-Source URL Deduplication            │
-│     (Reddit > Planet > Sacha priority)           │
-└──────────────────────────┬───────────────────────┘
-                           │
-                           ▼
-                  digest-YYYY-MM-DD.org
-                  latest-digest.org
+┌─────────────┐  ┌─────────────┐  ┌─────────────┐  ┌─────────────┐
+│  Git        │  │  Reddit     │  │ Hacker News │  │  Lobste.rs  │
+│  Savannah   │  │  (OAuth or  │  │  (Algolia)  │  │  (RSS tag)  │
+│             │  │   public)   │  │             │  │             │
+└──────┬──────┘  └──────┬──────┘  └──────┬──────┘  └──────┬──────┘
+       │                │                │                │
+       │  MODEL_TRIAGE  │          MODEL_SUMMARY          │
+       │  (coder 14B)   │          (general 14B)          │
+       │                │                │                │
+       ▼                ▼                ▼                ▼
+┌────────────────────────────────────────────────────────────────┐
+│                  seen_ids.json (TTL: 90d)                     │
+└────────────────────────────────────────────────────────────────┘
+       │                │                │                │
+┌──────┴──────┐  ┌──────┴──────┐  ┌──────┴──────┐  ┌──────┴──────┐
+│   Planet    │  │  Sacha Chua │  │   MELPA +   │  │ emacs-devel │
+│  Emacslife  │  │  Weekly     │  │  Releases   │  │ (Atom feed) │
+└──────┬──────┘  └──────┬──────┘  └──────┬──────┘  └──────┬──────┘
+       │                │                │                │
+       ▼                ▼                ▼                ▼
+┌────────────────────────────────────────────────────────────────┐
+│            Cross-Source URL Deduplication                      │
+│   (Reddit > HN > Lobsters > Planet > Sacha priority)          │
+└───────────────────────────┬────────────────────────────────────┘
+                            │
+                            ▼
+                   digest-YYYY-MM-DD.org
+                   latest-digest.org
 ```
 
 ## Configuration
@@ -158,7 +160,7 @@ REDDIT_CLIENT_SECRET=your_client_secret
 
 ## Bonus: Fortune File
 
-Section 10 extracts tips from the fortnightly r/emacs tips threads into a `fortune`-compatible file:
+Section 12 extracts tips from the fortnightly r/emacs tips threads into a `fortune`-compatible file:
 
 ```bash
 strfile tips_and_tricks.fortune

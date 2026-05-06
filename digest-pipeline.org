@@ -111,7 +111,7 @@ _fh.setFormatter(_fmt)
 log.addHandler(_fh)
 
 # ── Cache with TTL ─────────────────────────────────────────────────────────
-CACHE_KEYS = ["commits", "posts", "threads", "blogs", "sacha", "melpa", "releases"]
+CACHE_KEYS = ["commits", "posts", "threads", "blogs", "sacha", "melpa", "releases", "hn", "lobsters"]
 
 def load_cache():
     """Load cache, migrate old list format if needed, prune entries >CACHE_TTL_DAYS old."""
@@ -533,7 +533,187 @@ log.info(f"Reddit Triage Complete: {len(significant_posts)} notable posts.")
 : 10:09:51 [INFO] Starting Reddit Deep Triage...
 : 10:13:32 [INFO] Reddit Triage Complete: 28 notable posts.
 
-* 5. Blog Aggregation (Planet Emacslife)
+* 5. Hacker News
+
+Uses the free Algolia search API — no auth required. Searches for stories
+mentioning "emacs" from the past month, then triages with the general model.
+
+#+begin_src python
+hn_posts = []
+
+HN_API = "https://hn.algolia.com/api/v1/search_by_date"
+
+hn_system_prompt = """\
+You are a technical curator for a GNU Emacs digest.
+
+Review the Hacker News story below. Is it a substantive post about Emacs —
+covering a tool, technique, package, or thoughtful discussion? Skip tangential
+mentions, flamewars, and posts where Emacs is only incidentally referenced.
+
+For significant posts, write a `summary` (2-4 sentences) covering:
+  - What the post demonstrates, announces, or discusses
+  - The technical substance or key insight
+  - Notable community reactions if visible from the comment count
+
+Also write a short `why_it_matters` (1 sentence) for an experienced Emacs user.
+
+Respond ONLY with this JSON schema:
+{"is_significant": boolean, "summary": "2-4 sentence summary.", "why_it_matters": "One sentence."}
+"""
+
+log.info("Fetching Hacker News...")
+cutoff_ts   = int((datetime.datetime.now() - datetime.timedelta(days=DAYS_AGO)).timestamp())
+today_str   = datetime.date.today().isoformat()
+
+try:
+    resp = requests.get(HN_API, params={
+        "query":       "emacs",
+        "tags":        "story",
+        "numericFilters": f"created_at_i>{cutoff_ts}",
+        "hitsPerPage": 50,
+    }, headers={"User-Agent": REDDIT_USER_AGENT}, timeout=15)
+    resp.raise_for_status()
+    hn_hits = resp.json().get("hits", [])
+    log.info(f"  {len(hn_hits)} stories found.")
+except Exception as e:
+    log.error(f"  HN API failed: {e}")
+    hn_hits = []
+
+new_hits = [h for h in hn_hits if h.get("objectID", "") not in cache["hn"]]
+log.info(f"  {len(new_hits)} not yet seen.")
+
+for i, hit in enumerate(new_hits):
+    oid   = hit.get("objectID", "")
+    title = hit.get("title", "")
+    url   = hit.get("url") or f"https://news.ycombinator.com/item?id={oid}"
+    pts   = hit.get("points", 0)
+    nc    = hit.get("num_comments", 0)
+    author = hit.get("author", "unknown")
+    ts    = hit.get("created_at_i", 0)
+    post_date = datetime.datetime.fromtimestamp(ts).strftime("%Y-%m-%d") if ts else "Unknown"
+
+    # Skip low-engagement stories
+    if pts < 5:
+        cache["hn"][oid] = today_str
+        continue
+
+    try:
+        raw = llm_call(MODEL_SUMMARY, hn_system_prompt, f"Title: {title}\nURL: {url}\nPoints: {pts}\nComments: {nc}")
+        result, err = validate_json_response(raw, ["is_significant", "summary"])
+        cache["hn"][oid] = today_str
+        if err:
+            log.warning(f"  Validation failed for HN '{title[:50]}': {err}")
+            continue
+        if result["is_significant"]:
+            hn_posts.append({
+                "title":          title,
+                "url":            url,
+                "author":         author,
+                "date":           post_date,
+                "points":         pts,
+                "num_comments":   nc,
+                "summary":        result.get("summary", ""),
+                "why_it_matters": result.get("why_it_matters", ""),
+                "hn_link":        f"https://news.ycombinator.com/item?id={oid}",
+            })
+    except Exception as e:
+        log.error(f"  LLM call failed for HN '{title[:50]}': {e}")
+
+    if (i + 1) % 15 == 0:
+        save_cache(cache)
+
+save_cache(cache)
+log.info(f"Hacker News Triage Complete: {len(hn_posts)} notable stories.")
+#+end_src
+
+* 6. Lobste.rs
+
+Lobste.rs has a curated, invite-only community with excellent signal-to-noise
+ratio. The =emacs= tag provides a clean RSS feed — no auth needed.
+
+#+begin_src python
+lobsters_posts = []
+
+LOBSTERS_FEED = "https://lobste.rs/t/emacs.rss"
+
+lobsters_system_prompt = """\
+You are a technical curator for a GNU Emacs digest.
+
+Review the Lobste.rs post below. Is it a substantive technical post about
+Emacs — covering a package, technique, workflow, or thoughtful discussion?
+Skip tangential mentions and reposts of content already widely covered.
+
+For significant posts, write a `summary` (2-4 sentences) covering:
+  - What the post demonstrates or discusses
+  - The technical approach or key insight
+
+Also write `why_it_matters` (1 sentence) for an experienced Emacs user.
+
+Respond ONLY with this JSON schema:
+{"is_significant": boolean, "summary": "2-4 sentence summary.", "why_it_matters": "One sentence."}
+"""
+
+log.info("Fetching Lobste.rs...")
+cutoff_dt = datetime.datetime.now() - datetime.timedelta(days=DAYS_AGO)
+today_str = datetime.date.today().isoformat()
+
+try:
+    lob_feed = feedparser.parse(LOBSTERS_FEED)
+    log.info(f"  {len(lob_feed.entries)} entries in feed.")
+except Exception as e:
+    log.error(f"  Lobste.rs feed failed: {e}")
+    lob_feed = type('obj', (object,), {'entries': []})()
+
+new_entries = [e for e in lob_feed.entries
+               if e.get("link", "") not in cache["lobsters"]]
+log.info(f"  {len(new_entries)} not yet seen.")
+
+for i, entry in enumerate(new_entries):
+    link  = entry.get("link", "")
+    title = entry.get("title", "")
+
+    date_parsed = entry.get("published_parsed", entry.get("updated_parsed"))
+    if date_parsed:
+        entry_dt  = datetime.datetime.fromtimestamp(mktime(date_parsed))
+        post_date = entry_dt.strftime("%Y-%m-%d")
+        if entry_dt < cutoff_dt:
+            cache["lobsters"][link] = today_str
+            continue
+    else:
+        post_date = "Unknown Date"
+
+    # Get the Lobste.rs comment page URL
+    comments_url = entry.get("comments", "")
+    author       = entry.get("author", "unknown")
+
+    try:
+        raw = llm_call(MODEL_SUMMARY, lobsters_system_prompt, f"Title: {title}\nURL: {link}")
+        result, err = validate_json_response(raw, ["is_significant", "summary"])
+        cache["lobsters"][link] = today_str
+        if err:
+            log.warning(f"  Validation failed for Lobsters '{title[:50]}': {err}")
+            continue
+        if result["is_significant"]:
+            lobsters_posts.append({
+                "title":          title,
+                "url":            link,
+                "author":         author,
+                "date":           post_date,
+                "comments_url":   comments_url,
+                "summary":        result.get("summary", ""),
+                "why_it_matters": result.get("why_it_matters", ""),
+            })
+    except Exception as e:
+        log.error(f"  LLM call failed for Lobsters '{title[:50]}': {e}")
+
+    if (i + 1) % 10 == 0:
+        save_cache(cache)
+
+save_cache(cache)
+log.info(f"Lobste.rs Triage Complete: {len(lobsters_posts)} notable posts.")
+#+end_src
+
+* 7. Blog Aggregation (Planet Emacslife)
 
 Planet Emacslife aggregates the canonical Emacs blogosphere via Atom. Now with
 date filtering and an upgraded prompt matching the richness of Reddit summaries.
@@ -618,7 +798,7 @@ log.info(f"Planet Triage Complete: {len(blog_posts)} notable posts.")
 : 10:14:16 [INFO]   58 entries total, 58 not yet seen.
 : 10:15:46 [INFO] Planet Triage Complete: 19 notable posts.
 
-* 6. Sacha Chua's Weekly Emacs News
+* 8. Sacha Chua's Weekly Emacs News
 
 The single most comprehensive weekly aggregation of Emacs content — captures
 items from Mastodon, IRC, mailing lists, and blogs that no other source covers.
@@ -729,7 +909,7 @@ log.info(f"Sacha Chua Complete: {len(sacha_items)} items extracted across {len(n
 : 10:16:27 [INFO]   2026-04-06: extracted 68 links from '2026-04-06 Emacs news'
 : 10:16:27 [INFO] Sacha Chua Complete: 358 items extracted across 7 weekly posts.
 
-* 7. Package Ecosystem (MELPA & Major Releases)
+* 9. Package Ecosystem (MELPA & Major Releases)
 
 Track new packages added to MELPA and releases of major ecosystem packages.
 
@@ -851,7 +1031,7 @@ log.info(f"Package Ecosystem Complete: {len(new_melpa_packages)} new MELPA packa
 10:16:46 [INFO] Package Ecosystem Complete: 9 new MELPA packages, 6 tracked releases.
 #+end_example
 
-* 8. Mailing List (emacs-devel)
+* 10. Mailing List (emacs-devel)
 
 Uses the public-inbox Atom feeds with a fallback mirror. LLM triage filters
 for substantive proposals and discussions.
@@ -972,15 +1152,15 @@ log.info(f"Mailing List Triage Complete: {len(ml_threads)} notable threads.")
 : 10:16:59 [INFO]   11 candidate threads to triage.
 : 10:17:22 [INFO] Mailing List Triage Complete: 2 notable threads.
 
-* 9. Cross-Source Deduplication & Digest Compilation
+* 11. Cross-Source Deduplication & Digest Compilation
 
 Merges all sources, removes items appearing in multiple feeds (keeping the
 richest version), and writes a versioned Org file.
 
 #+begin_src python :results output
-def deduplicate_sources(posts, blogs, sacha):
+def deduplicate_sources(posts, hn, lobsters, blogs, sacha):
     """Remove items appearing in multiple sources, keeping the richest version.
-    Priority: Reddit > Planet > Sacha (Reddit has quotes, scores, community voice)."""
+    Priority: Reddit > HN > Lobsters > Planet > Sacha."""
     seen = set()
 
     # Reddit posts — highest priority, keep all
@@ -990,7 +1170,27 @@ def deduplicate_sources(posts, blogs, sacha):
         seen.add(key)
         deduped_posts.append(p)
 
-    # Planet blogs — drop if URL already covered by Reddit
+    # HN posts — drop if already covered by Reddit
+    deduped_hn = []
+    for h in hn:
+        key = normalize_url(h["url"])
+        if key not in seen:
+            seen.add(key)
+            deduped_hn.append(h)
+        else:
+            log.debug(f"  Dedup: HN '{h['title'][:50]}' already in Reddit")
+
+    # Lobsters posts — drop if already covered
+    deduped_lob = []
+    for l in lobsters:
+        key = normalize_url(l["url"])
+        if key not in seen:
+            seen.add(key)
+            deduped_lob.append(l)
+        else:
+            log.debug(f"  Dedup: Lobsters '{l['title'][:50]}' already covered")
+
+    # Planet blogs — drop if URL already covered
     deduped_blogs = []
     for b in blogs:
         key = normalize_url(b["url"])
@@ -998,7 +1198,7 @@ def deduplicate_sources(posts, blogs, sacha):
             seen.add(key)
             deduped_blogs.append(b)
         else:
-            log.debug(f"  Dedup: blog '{b['title'][:50]}' already in Reddit")
+            log.debug(f"  Dedup: blog '{b['title'][:50]}' already covered")
 
     # Sacha items — drop if URL already covered
     deduped_sacha = []
@@ -1008,10 +1208,10 @@ def deduplicate_sources(posts, blogs, sacha):
             seen.add(key)
             deduped_sacha.append(s)
 
-    return deduped_posts, deduped_blogs, deduped_sacha
+    return deduped_posts, deduped_hn, deduped_lob, deduped_blogs, deduped_sacha
 
 
-def generate_master_digest(commits, posts, blogs, sacha, melpa, releases, threads):
+def generate_master_digest(commits, posts, hn, lobsters, blogs, sacha, melpa, releases, threads):
     out  = "#+TITLE: Sovereign Digest: Emacs Edition\n"
     out += f"#+DATE: {time.strftime('%Y-%m-%d')}\n\n"
 
@@ -1042,6 +1242,32 @@ def generate_master_digest(commits, posts, blogs, sacha, melpa, releases, thread
         if p.get("quote"):
             out += f"- *Community voice:* \u201c{p['quote']}\u201d\n"
         out += "\n"
+
+    # ── Hacker News ───────────────────────────────────────────────────────
+    if hn:
+        out += "* Hacker News\n\n"
+        for h in hn:
+            out += f"** {h['title']}\n"
+            out += (f":PROPERTIES:\n:DATE: {h.get('date', 'Unknown')}\n"
+                    f":POINTS: {h.get('points', 0)} ↑\n:COMMENTS: {h.get('num_comments', 0)}\n:END:\n")
+            out += f"- *Link:* {h['url']}\n"
+            out += f"- *HN Discussion:* {h['hn_link']}\n"
+            if h.get("why_it_matters"):
+                out += f"- *Why it matters:* {h['why_it_matters']}\n"
+            out += f"- *Summary:* {h['summary']}\n\n"
+
+    # ── Lobste.rs ─────────────────────────────────────────────────────────
+    if lobsters:
+        out += "* Lobste.rs\n\n"
+        for l in lobsters:
+            out += f"** {l['title']}\n"
+            out += f":PROPERTIES:\n:DATE: {l.get('date', 'Unknown')}\n:END:\n"
+            out += f"- *Link:* {l['url']}\n"
+            if l.get("comments_url"):
+                out += f"- *Discussion:* {l['comments_url']}\n"
+            if l.get("why_it_matters"):
+                out += f"- *Why it matters:* {l['why_it_matters']}\n"
+            out += f"- *Summary:* {l['summary']}\n\n"
 
     # ── Planet Emacslife ──────────────────────────────────────────────────
     if blogs:
@@ -1100,19 +1326,24 @@ def generate_master_digest(commits, posts, blogs, sacha, melpa, releases, thread
 
 # ── Deduplicate ───────────────────────────────────────────────────────────
 log.info("Deduplicating across sources...")
+orig_hn    = len(hn_posts)
+orig_lob   = len(lobsters_posts)
 orig_blogs = len(blog_posts)
 orig_sacha = len(sacha_items)
 
-deduped_posts, deduped_blogs, deduped_sacha = deduplicate_sources(
-    significant_posts, blog_posts, sacha_items
+deduped_posts, deduped_hn, deduped_lob, deduped_blogs, deduped_sacha = deduplicate_sources(
+    significant_posts, hn_posts, lobsters_posts, blog_posts, sacha_items
 )
 
+log.info(f"  HN:    {orig_hn} → {len(deduped_hn)} after dedup")
+log.info(f"  Lob:   {orig_lob} → {len(deduped_lob)} after dedup")
 log.info(f"  Blogs: {orig_blogs} → {len(deduped_blogs)} after dedup")
 log.info(f"  Sacha: {orig_sacha} → {len(deduped_sacha)} after dedup")
 
 # ── Generate & write ──────────────────────────────────────────────────────
 master_text = generate_master_digest(
-    significant_commits, deduped_posts, deduped_blogs, deduped_sacha,
+    significant_commits, deduped_posts, deduped_hn, deduped_lob,
+    deduped_blogs, deduped_sacha,
     new_melpa_packages, package_releases, ml_threads,
 )
 
@@ -1129,6 +1360,7 @@ shutil.copy2(dated_path, latest_path)
 log.info(f"Digest written to {dated_path}")
 log.info(f"  Also copied to {latest_path}")
 log.info(f"  Commits: {len(significant_commits)}, Reddit: {len(deduped_posts)}, "
+         f"HN: {len(deduped_hn)}, Lobsters: {len(deduped_lob)}, "
          f"Blogs: {len(deduped_blogs)}, Sacha: {len(deduped_sacha)}, "
          f"MELPA: {len(new_melpa_packages)}, Releases: {len(package_releases)}, "
          f"ML threads: {len(ml_threads)}")
@@ -1144,7 +1376,7 @@ print(f"Digest compiled: {dated_path}")
 : 10:17:45 [INFO]   Commits: 9, Reddit: 28, Blogs: 18, Sacha: 224, MELPA: 9, Releases: 6, ML threads: 2
 : Digest compiled: /home/calebc42/pkb/resources/emacs/digest/digest-2026-05-06.org
 
-* 10. Fortnightly Tips & Tricks to Fortune
+* 12. Fortnightly Tips & Tricks to Fortune
 
 Extracts high-value comments from the official tips/tricks threads and formats them
 as a =.fortune= file separated by =%=.
